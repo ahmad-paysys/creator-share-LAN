@@ -28,8 +28,13 @@ app.use(express.json({ limit: "1mb" }));
 
 const limiter = createTokenBucketRateLimiter(100, 100);
 
-app.get("/health", async (_req, res) => {
+async function refreshIndexAndQueue(): Promise<void> {
   await mediaIndex.ensureFresh();
+  thumbnailService.startBackgroundProcessing(Array.from(mediaIndex.mediaById.values()));
+}
+
+app.get("/health", async (_req, res) => {
+  await refreshIndexAndQueue();
   res.json({
     version: "1.0.0",
     mediaCount: mediaIndex.mediaById.size,
@@ -38,19 +43,42 @@ app.get("/health", async (_req, res) => {
 });
 
 app.get("/api/folders", async (_req, res) => {
-  await mediaIndex.ensureFresh();
+  await refreshIndexAndQueue();
   res.json(mediaIndex.folderTree);
 });
 
 app.get("/api/folders/:folderId/media", async (req, res) => {
-  await mediaIndex.ensureFresh();
+  await refreshIndexAndQueue();
   const folderId = req.params.folderId;
   const folder = mediaIndex.foldersById.get(folderId);
   if (!folder) {
     res.status(404).json({ error: "Folder not found" });
     return;
   }
-  res.json(mediaIndex.getMediaForFolder(folderId));
+  const media = mediaIndex.getMediaForFolder(folderId);
+  thumbnailService.prioritizeForFolder(media);
+  res.json(media);
+});
+
+app.get("/thumbnails/:thumbFile", async (req, res) => {
+  await refreshIndexAndQueue();
+  const thumbFile = req.params.thumbFile;
+  if (!thumbFile.endsWith(".jpg")) {
+    res.status(400).json({ error: "Invalid thumbnail path" });
+    return;
+  }
+
+  const mediaId = thumbFile.slice(0, -4);
+  const media = mediaIndex.mediaById.get(mediaId);
+  if (!media) {
+    res.status(404).json({ error: "Media not found" });
+    return;
+  }
+
+  const output = await thumbnailService.ensureThumbnail(media);
+  res.setHeader("Cache-Control", "public, max-age=86400");
+  res.setHeader("Content-Type", "image/jpeg");
+  res.sendFile(output);
 });
 
 app.get("/media/:mediaId/original", async (req, res) => {
@@ -155,7 +183,7 @@ if (fs.existsSync(clientDist)) {
 
 async function bootstrap() {
   await mediaIndex.init();
-  await thumbnailService.warm(Array.from(mediaIndex.mediaById.values()));
+  await refreshIndexAndQueue();
 
   app.listen(config.port, "0.0.0.0", () => {
     console.log(`Creator Share LAN running on port ${config.port}`);
