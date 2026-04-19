@@ -50,8 +50,7 @@ app.get("/api/folders/:folderId/media", async (req, res) => {
     res.status(404).json({ error: "Folder not found" });
     return;
   }
-  const items = mediaIndex.mediaByFolderId.get(folderId);
-  res.json(items ?? []);
+  res.json(mediaIndex.getMediaForFolder(folderId));
 });
 
 app.get("/media/:mediaId/original", async (req, res) => {

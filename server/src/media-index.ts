@@ -70,6 +70,29 @@ export class MediaIndex {
     this.dirty = false;
   }
 
+  public getMediaForFolder(folderId: string): MediaItem[] {
+    const folder = this.foldersById.get(folderId);
+    if (!folder) {
+      return [];
+    }
+
+    const gathered: MediaItem[] = [];
+    const stack: FolderNode[] = [folder];
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+      const direct = this.mediaByFolderId.get(current.id);
+      if (direct?.length) {
+        gathered.push(...direct);
+      }
+      if (current.children.length) {
+        stack.push(...current.children);
+      }
+    }
+
+    gathered.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    return gathered;
+  }
+
   private async rebuild(): Promise<void> {
     if (this.buildPromise) {
       return this.buildPromise;
