@@ -131,4 +131,51 @@ export const DB_MIGRATIONS: DbMigration[] = [
       DROP TABLE IF EXISTS galleries;
     `,
   },
+  {
+    version: 3,
+    name: "temporary_views_domain",
+    upSql: `
+      CREATE TABLE IF NOT EXISTS share_views (
+        id TEXT PRIMARY KEY,
+        slug TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        visibility TEXT NOT NULL CHECK(visibility IN ('public','private')),
+        source_type TEXT NOT NULL CHECK(source_type IN ('selection','gallery')),
+        source_gallery_id TEXT,
+        created_by TEXT,
+        expires_at TEXT NOT NULL,
+        max_uses INTEGER,
+        uses_count INTEGER NOT NULL DEFAULT 0,
+        revoked_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(source_gallery_id) REFERENCES galleries(id) ON DELETE SET NULL,
+        FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_share_views_slug ON share_views(slug);
+      CREATE INDEX IF NOT EXISTS idx_share_views_expires_at ON share_views(expires_at);
+      CREATE INDEX IF NOT EXISTS idx_share_views_visibility ON share_views(visibility);
+
+      CREATE TABLE IF NOT EXISTS share_view_items (
+        id TEXT PRIMARY KEY,
+        share_view_id TEXT NOT NULL,
+        media_id TEXT NOT NULL,
+        order_index INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(share_view_id) REFERENCES share_views(id) ON DELETE CASCADE,
+        UNIQUE(share_view_id, media_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_share_view_items_share_view_id ON share_view_items(share_view_id);
+    `,
+    downSql: `
+      DROP INDEX IF EXISTS idx_share_view_items_share_view_id;
+      DROP TABLE IF EXISTS share_view_items;
+      DROP INDEX IF EXISTS idx_share_views_visibility;
+      DROP INDEX IF EXISTS idx_share_views_expires_at;
+      DROP INDEX IF EXISTS idx_share_views_slug;
+      DROP TABLE IF EXISTS share_views;
+    `,
+  },
 ];
