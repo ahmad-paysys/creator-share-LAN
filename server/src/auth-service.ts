@@ -101,6 +101,42 @@ export class AuthService {
     return toSafeUser(user);
   }
 
+  public listUsers(): SafeUser[] {
+    return this.store.listUsers();
+  }
+
+  public async updateUserRole(input: {
+    actorUserId: string;
+    targetUserId: string;
+    role: string;
+  }): Promise<SafeUser | null> {
+    assertValidRole(input.role);
+
+    const actor = this.store.getUserById(input.actorUserId);
+    if (!actor || !actor.isActive) {
+      throw new Error("Actor not found");
+    }
+
+    if (actor.role !== "owner" && actor.role !== "admin") {
+      throw new Error("Forbidden");
+    }
+
+    const target = this.store.getUserById(input.targetUserId);
+    if (!target || !target.isActive) {
+      return null;
+    }
+
+    if (target.role === "owner" && input.role !== "owner") {
+      throw new Error("Cannot change owner role");
+    }
+
+    if (actor.role === "admin" && input.role === "owner") {
+      throw new Error("Only owner can assign owner role");
+    }
+
+    return this.store.updateUserRole(input.targetUserId, input.role);
+  }
+
   public async login(input: {
     username: string;
     password: string;

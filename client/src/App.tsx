@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
-import { absoluteUrl, createDownloadPlan, fetchFolderMedia, fetchFolders, fetchSyncStatus } from "./api";
+import {
+  absoluteUrl,
+  createDownloadPlan,
+  fetchCurrentUser,
+  fetchFolderMedia,
+  fetchFolders,
+  fetchSyncStatus,
+  login,
+  logout,
+} from "./api";
+import AdminPanel from "./components/AdminPanel";
 import DownloadModal from "./components/DownloadModal";
 import FolderTree from "./components/FolderTree";
 import GalleryGrid from "./components/GalleryGrid";
 import Lightbox from "./components/Lightbox";
-import type { FolderNode, MediaItem, SyncStatus } from "./types";
+import type { FolderNode, MediaItem, SafeUser, SyncStatus } from "./types";
 
 type SelectionAction =
   | { type: "toggle"; id: string }
@@ -105,6 +115,11 @@ export default function App() {
   const urlHydratedRef = useRef(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [syncToast, setSyncToast] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<SafeUser | null>(null);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const lastSeenRevisionRef = useRef<number | null>(null);
   const syncToastTimerRef = useRef<number | null>(null);
 
@@ -166,6 +181,16 @@ export default function App() {
       urlHydratedRef.current = true;
     })().catch(console.error);
   }, [loadFolder]);
+
+  useEffect(() => {
+    fetchCurrentUser()
+      .then((user) => {
+        setCurrentUser(user);
+      })
+      .catch(() => {
+        setCurrentUser(null);
+      });
+  }, []);
 
   useEffect(() => {
     if (!urlHydratedRef.current) {
@@ -428,14 +453,80 @@ export default function App() {
     return "border-mint/70 bg-mint/20 text-white";
   }, [syncStatus]);
 
+  const canOpenAdmin = currentUser?.role === "owner" || currentUser?.role === "admin";
+
+  const runLogin = useCallback(async () => {
+    if (!loginForm.username.trim() || !loginForm.password) {
+      setAuthError("Username and password are required.");
+      return;
+    }
+
+    setAuthBusy(true);
+    setAuthError(null);
+    try {
+      const response = await login(loginForm.username.trim(), loginForm.password);
+      setCurrentUser(response.user);
+      setLoginForm({ username: "", password: "" });
+    } catch {
+      setAuthError("Invalid credentials.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }, [loginForm.password, loginForm.username]);
+
+  const runLogout = useCallback(async () => {
+    setAuthBusy(true);
+    setAuthError(null);
+    try {
+      await logout();
+      setCurrentUser(null);
+      setShowAdminPanel(false);
+    } finally {
+      setAuthBusy(false);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen animate-rise px-4 py-6 md:px-8">
       <div className="mx-auto max-w-[1600px] space-y-6">
         <header className="glass rounded-3xl p-6 shadow-lg shadow-black/20">
-          <h1 className="hero-title">Creator Share LAN</h1>
-          <p className="mt-2 text-sm text-white/80">
-            Wedding photo and video delivery on your local network.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="hero-title">Creator Share LAN</h1>
+              <p className="mt-2 text-sm text-white/80">
+                Wedding photo and video delivery on your local network.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 text-xs text-white/80">
+              {currentUser ? (
+                <>
+                  <span className="rounded-full border border-white/25 px-3 py-1">
+                    {currentUser.username} ({currentUser.role})
+                  </span>
+                  <button
+                    className="rounded-full bg-white/20 px-3 py-1 hover:bg-white/30 disabled:opacity-40"
+                    disabled={authBusy}
+                    onClick={() => {
+                      runLogout().catch(() => undefined);
+                    }}
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <span className="rounded-full border border-white/25 px-3 py-1">Anonymous mode</span>
+              )}
+
+              <button
+                className="rounded-full bg-mint/25 px-3 py-1 hover:bg-mint/40 disabled:opacity-40"
+                disabled={!canOpenAdmin}
+                onClick={() => setShowAdminPanel((prev) => !prev)}
+              >
+                {showAdminPanel ? "Hide Admin" : "Admin"}
+              </button>
+            </div>
+          </div>
           <p className="mt-1 text-xs text-white/70">Active folder: {activeFolderPath || "All Media"}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className={`rounded-full border px-3 py-1 text-xs ${syncBadgeTone}`}>{syncLabel}</span>
@@ -443,7 +534,45 @@ export default function App() {
               <span className="text-xs text-white/70">Revision {syncStatus.revision} • Media {syncStatus.mediaCount}</span>
             )}
           </div>
+
+          {!currentUser && (
+            <div className="mt-4 grid gap-2 rounded-2xl border border-white/15 bg-black/25 p-3 md:grid-cols-[1fr,1fr,auto]">
+              <input
+                className="rounded-lg bg-black/30 px-2 py-1 text-sm"
+                placeholder="Admin username"
+                value={loginForm.username}
+                onChange={(event) => setLoginForm((prev) => ({ ...prev, username: event.target.value }))}
+              />
+              <input
+                className="rounded-lg bg-black/30 px-2 py-1 text-sm"
+                type="password"
+                placeholder="Password"
+                value={loginForm.password}
+                onChange={(event) => setLoginForm((prev) => ({ ...prev, password: event.target.value }))}
+              />
+              <button
+                className="rounded-lg bg-white/20 px-3 py-1 text-sm hover:bg-white/30 disabled:opacity-40"
+                disabled={authBusy}
+                onClick={() => {
+                  runLogin().catch(() => undefined);
+                }}
+              >
+                Admin Login
+              </button>
+              {authError && <p className="md:col-span-3 text-xs text-coral">{authError}</p>}
+            </div>
+          )}
+
+          {currentUser && !canOpenAdmin && (
+            <p className="mt-3 rounded-xl border border-sand/60 bg-sand/15 px-3 py-2 text-xs text-sand">
+              Access denied: this account cannot open the admin panel.
+            </p>
+          )}
         </header>
+
+        {showAdminPanel && currentUser && canOpenAdmin && (
+          <AdminPanel currentUser={currentUser} selectedMediaIds={selectedItems.map((item) => item.id)} />
+        )}
 
         <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
           <aside className="glass rounded-3xl p-4 shadow-lg shadow-black/20">
