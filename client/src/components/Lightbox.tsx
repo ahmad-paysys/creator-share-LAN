@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { absoluteUrl } from "../api";
 import type { MediaItem } from "../types";
@@ -13,8 +13,31 @@ interface LightboxProps {
 export default function Lightbox({ items, index, onClose, onMove }: LightboxProps) {
   const item = items[index];
   const touchStartX = useRef<number | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [slideshowEnabled, setSlideshowEnabled] = useState(false);
+  const [slideshowMs, setSlideshowMs] = useState(5000);
+  const [kioskEnabled, setKioskEnabled] = useState(false);
   const hasPrev = index > 0;
   const hasNext = index < items.length - 1;
+
+  const moveNext = useCallback(
+    (wrap: boolean) => {
+      if (items.length === 0) {
+        return;
+      }
+      const next = index + 1;
+      if (next <= items.length - 1) {
+        onMove(next);
+      } else if (wrap) {
+        onMove(0);
+      }
+    },
+    [index, items.length, onMove],
+  );
+
+  const movePrev = useCallback(() => {
+    onMove(Math.max(0, index - 1));
+  }, [index, onMove]);
 
   useEffect(() => {
     const scrollY = window.scrollY;
@@ -46,16 +69,52 @@ export default function Lightbox({ items, index, onClose, onMove }: LightboxProp
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "ArrowRight") {
-        onMove(Math.min(items.length - 1, index + 1));
+        moveNext(false);
       }
       if (event.key === "ArrowLeft") {
-        onMove(Math.max(0, index - 1));
+        movePrev();
+      }
+      if (event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => undefined);
+        } else {
+          rootRef.current?.requestFullscreen().catch(() => undefined);
+        }
+      }
+      if (event.key === " ") {
+        event.preventDefault();
+        setSlideshowEnabled((prev) => !prev);
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [index, items.length, onMove]);
+  }, [moveNext, movePrev]);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setKioskEnabled(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
+  useEffect(() => {
+    if (!slideshowEnabled || items.length <= 1) {
+      return;
+    }
+
+    if (item?.type === "video") {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      moveNext(true);
+    }, slideshowMs);
+
+    return () => window.clearTimeout(timer);
+  }, [item?.type, items.length, moveNext, slideshowEnabled, slideshowMs]);
 
   useEffect(() => {
     const next = items[index + 1];
@@ -76,6 +135,7 @@ export default function Lightbox({ items, index, onClose, onMove }: LightboxProp
 
   return createPortal(
     <div
+      ref={rootRef}
       className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/90 p-4"
       onTouchStart={(event) => {
         touchStartX.current = event.touches[0]?.clientX ?? null;
@@ -102,6 +162,45 @@ export default function Lightbox({ items, index, onClose, onMove }: LightboxProp
         Close
       </button>
 
+      <div className="fixed left-5 top-5 z-30 flex items-center gap-2">
+        <button
+          className={`rounded-full border border-white/35 px-3 py-1 text-sm text-white shadow-lg shadow-black/50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 ${
+            slideshowEnabled ? "bg-mint text-ink hover:bg-mint/90" : "bg-black/70 hover:bg-black/80"
+          }`}
+          onClick={() => setSlideshowEnabled((prev) => !prev)}
+          title="Toggle slideshow (Space)"
+        >
+          {slideshowEnabled ? "Pause" : "Play"}
+        </button>
+
+        <select
+          className="rounded-full border border-white/35 bg-black/70 px-3 py-1 text-sm text-white shadow-lg shadow-black/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+          value={slideshowMs}
+          onChange={(event) => setSlideshowMs(Number(event.target.value))}
+          title="Slideshow speed"
+        >
+          <option value={3000}>3s</option>
+          <option value={5000}>5s</option>
+          <option value={8000}>8s</option>
+        </select>
+
+        <button
+          className={`rounded-full border border-white/35 px-3 py-1 text-sm text-white shadow-lg shadow-black/50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 ${
+            kioskEnabled ? "bg-mint text-ink hover:bg-mint/90" : "bg-black/70 hover:bg-black/80"
+          }`}
+          onClick={() => {
+            if (document.fullscreenElement) {
+              document.exitFullscreen().catch(() => undefined);
+            } else {
+              rootRef.current?.requestFullscreen().catch(() => undefined);
+            }
+          }}
+          title="Toggle kiosk mode (K)"
+        >
+          {kioskEnabled ? "Exit Kiosk" : "Kiosk"}
+        </button>
+      </div>
+
       <div className="pointer-events-none fixed inset-y-0 left-0 z-20 hidden w-24 bg-gradient-to-r from-black/55 to-transparent md:block" />
       <div className="pointer-events-none fixed inset-y-0 right-0 z-20 hidden w-24 bg-gradient-to-l from-black/55 to-transparent md:block" />
       <div className="pointer-events-none fixed inset-x-0 top-0 z-20 h-20 bg-gradient-to-b from-black/55 to-transparent md:hidden" />
@@ -113,7 +212,7 @@ export default function Lightbox({ items, index, onClose, onMove }: LightboxProp
             ? "hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
             : "cursor-not-allowed opacity-40"
         }`}
-        onClick={() => hasPrev && onMove(index - 1)}
+        onClick={() => hasPrev && movePrev()}
         disabled={!hasPrev}
         aria-disabled={!hasPrev}
         aria-label="Previous media"
@@ -127,7 +226,7 @@ export default function Lightbox({ items, index, onClose, onMove }: LightboxProp
             ? "hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
             : "cursor-not-allowed opacity-40"
         }`}
-        onClick={() => hasNext && onMove(index + 1)}
+        onClick={() => hasNext && moveNext(false)}
         disabled={!hasNext}
         aria-disabled={!hasNext}
         aria-label="Next media"
@@ -142,7 +241,7 @@ export default function Lightbox({ items, index, onClose, onMove }: LightboxProp
             ? "hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
             : "cursor-not-allowed opacity-40"
         }`}
-        onClick={() => hasPrev && onMove(index - 1)}
+        onClick={() => hasPrev && movePrev()}
         disabled={!hasPrev}
         aria-disabled={!hasPrev}
         aria-label="Previous media"
@@ -157,7 +256,7 @@ export default function Lightbox({ items, index, onClose, onMove }: LightboxProp
             ? "hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
             : "cursor-not-allowed opacity-40"
         }`}
-        onClick={() => hasNext && onMove(index + 1)}
+        onClick={() => hasNext && moveNext(false)}
         disabled={!hasNext}
         aria-disabled={!hasNext}
         aria-label="Next media"
@@ -178,7 +277,13 @@ export default function Lightbox({ items, index, onClose, onMove }: LightboxProp
             <video
               src={absoluteUrl(`/media/${item.id}/original`)}
               controls
+              autoPlay={slideshowEnabled}
               poster={absoluteUrl(item.thumbnailUrl)}
+              onEnded={() => {
+                if (slideshowEnabled) {
+                  moveNext(true);
+                }
+              }}
               className="max-h-[calc(100vh-10rem)] rounded-xl"
             />
           )}
