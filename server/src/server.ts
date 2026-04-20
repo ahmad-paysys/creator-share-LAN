@@ -27,10 +27,17 @@ app.use(compression());
 app.use(express.json({ limit: "1mb" }));
 
 const limiter = createTokenBucketRateLimiter(100, 100);
+let queuedRevision = -1;
 
 async function refreshIndexAndQueue(): Promise<void> {
   await mediaIndex.ensureFresh();
-  thumbnailService.startBackgroundProcessing(Array.from(mediaIndex.mediaById.values()));
+  const revision = mediaIndex.getRevision();
+  if (revision === queuedRevision) {
+    return;
+  }
+
+  await thumbnailService.syncMediaCatalog(Array.from(mediaIndex.mediaById.values()));
+  queuedRevision = revision;
 }
 
 app.get("/health", async (_req, res) => {

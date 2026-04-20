@@ -60,6 +60,10 @@ function parseBool(value: string): boolean {
   return ["1", "true", "yes", "on"].includes(value.toLowerCase());
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
 export function loadConfig(): AppConfig {
   const workspaceRoot = findWorkspaceRoot(process.cwd());
   const localEnv = path.resolve(process.cwd(), ".env");
@@ -95,6 +99,8 @@ export function loadConfig(): AppConfig {
 
   const corsAllowedOriginsRaw = process.env.CORS_ALLOWED_ORIGINS ?? DEFAULTS.CORS_ALLOWED_ORIGINS;
   const corsAllowedOrigins = corsAllowedOriginsRaw === "*" ? ["*"] : parseList(corsAllowedOriginsRaw);
+  const requestedThumbnailSize = Number(process.env.THUMBNAIL_SIZE_PX ?? DEFAULTS.THUMBNAIL_SIZE_PX);
+  const thumbnailSizePx = clamp(requestedThumbnailSize, 64, 512);
 
   return {
     apiBaseUrl: process.env.VITE_API_BASE_URL ?? DEFAULTS.VITE_API_BASE_URL,
@@ -104,7 +110,7 @@ export function loadConfig(): AppConfig {
     nodeEnv: process.env.NODE_ENV ?? "production",
     defaultImageResizeMb: Number(process.env.DEFAULT_IMAGE_RESIZE_MB ?? DEFAULTS.DEFAULT_IMAGE_RESIZE_MB),
     defaultImageQuality: Number(process.env.DEFAULT_IMAGE_QUALITY ?? DEFAULTS.DEFAULT_IMAGE_QUALITY),
-    thumbnailSizePx: Number(process.env.THUMBNAIL_SIZE_PX ?? DEFAULTS.THUMBNAIL_SIZE_PX),
+    thumbnailSizePx,
     videoThumbnailQuality: Number(process.env.VIDEO_THUMBNAIL_QUALITY ?? DEFAULTS.VIDEO_THUMBNAIL_QUALITY),
     videoFrameTimestamp: process.env.VIDEO_FRAME_TIMESTAMP ?? DEFAULTS.VIDEO_FRAME_TIMESTAMP,
     mediaRootPath,

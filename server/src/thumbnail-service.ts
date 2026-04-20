@@ -1,8 +1,10 @@
 import fs from "node:fs";
+import fsp from "node:fs/promises";
 import path from "node:path";
 import ffmpeg from "fluent-ffmpeg";
 import sharp from "sharp";
 import type { AppConfig, MediaItem } from "./types";
+import { ThumbnailManifest } from "./thumbnail-manifest";
 
 interface QueueEntry {
   media: MediaItem;
@@ -11,6 +13,7 @@ interface QueueEntry {
 }
 
 const IDLE_WAIT_MS = 150;
+const THUMBNAIL_PIPELINE_VERSION = 1;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -27,10 +30,17 @@ export class ThumbnailService {
   private readonly queue: QueueEntry[] = [];
   private readonly queuedPriorities = new Map<string, number>();
   private readonly activeJobs = new Map<string, Promise<void>>();
+  private readonly mediaById = new Map<string, MediaItem>();
+  private readonly manifest: ThumbnailManifest;
   private workersStarted = false;
+  private initialized = false;
   private sequence = 0;
+  private readonly settingsSignature: string;
 
-  constructor(private readonly config: AppConfig) {}
+  constructor(private readonly config: AppConfig) {
+    this.manifest = new ThumbnailManifest(path.join(this.config.thumbnailCacheDir, "manifest.json"));
+    this.settingsSignature = `v${THUMBNAIL_PIPELINE_VERSION}|size:${this.config.thumbnailSizePx}|q:${this.config.videoThumbnailQuality}|fit:cover|fmt:jpeg`;
+  }
 
   public thumbnailPath(mediaId: string): string {
     return path.join(this.config.thumbsDir, `${mediaId}.jpg`);
@@ -40,9 +50,21 @@ export class ThumbnailService {
     return path.join(this.config.resizedDir, `${mediaId}-${sizeMb}-${quality}.jpg`);
   }
 
-  public startBackgroundProcessing(mediaItems: MediaItem[]): void {
+  public async syncMediaCatalog(mediaItems: MediaItem[]): Promise<void> {
+    await this.initialize();
     this.ensureWorkers();
+
+    this.mediaById.clear();
     for (const media of mediaItems) {
+      this.mediaById.set(media.id, media);
+    }
+
+    this.manifest.removeUnknown(new Set(mediaItems.map((media) => media.id)));
+
+    for (const media of mediaItems) {
+      if (!this.isStale(media)) {
+        continue;
+      }
       const depth = folderDepth(media.relativePath);
       this.enqueue(media, 100 + depth * 10);
     }
@@ -57,13 +79,23 @@ export class ThumbnailService {
   }
 
   public async ensureThumbnail(media: MediaItem): Promise<string> {
-    const output = this.thumbnailPath(media.id);
-    if (fs.existsSync(output)) {
-      return output;
+    await this.initialize();
+    this.mediaById.set(media.id, media);
+
+    if (!this.isStale(media)) {
+      return this.thumbnailPath(media.id);
     }
 
     await this.runJob(media);
-    return output;
+    return this.thumbnailPath(media.id);
+  }
+
+  private async initialize(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+    await this.manifest.load();
+    this.initialized = true;
   }
 
   private ensureWorkers(): void {
@@ -79,8 +111,7 @@ export class ThumbnailService {
   }
 
   private enqueue(media: MediaItem, priority: number): void {
-    const output = this.thumbnailPath(media.id);
-    if (fs.existsSync(output)) {
+    if (!this.isStale(media)) {
       return;
     }
 
@@ -90,34 +121,23 @@ export class ThumbnailService {
     }
 
     this.queuedPriorities.set(media.id, priority);
-    this.queue.push({
-      media,
-      priority,
-      sequence: this.sequence++,
-    });
+    this.heapPush({ media, priority, sequence: this.sequence++ });
   }
 
   private popNext(): QueueEntry | undefined {
-    if (this.queue.length === 0) {
-      return undefined;
-    }
-
-    let bestIndex = 0;
-    for (let i = 1; i < this.queue.length; i += 1) {
-      const current = this.queue[i];
-      const best = this.queue[bestIndex];
-      if (current.priority < best.priority || (current.priority === best.priority && current.sequence < best.sequence)) {
-        bestIndex = i;
+    while (this.queue.length > 0) {
+      const entry = this.heapPop();
+      if (!entry) {
+        return undefined;
       }
-    }
+      if (this.queuedPriorities.get(entry.media.id) !== entry.priority) {
+        continue;
+      }
 
-    const [entry] = this.queue.splice(bestIndex, 1);
-    if (this.queuedPriorities.get(entry.media.id) !== entry.priority) {
-      return undefined;
+      this.queuedPriorities.delete(entry.media.id);
+      return entry;
     }
-
-    this.queuedPriorities.delete(entry.media.id);
-    return entry;
+    return undefined;
   }
 
   private async workerLoop(): Promise<void> {
@@ -138,7 +158,7 @@ export class ThumbnailService {
       return existing;
     }
 
-    const job = this.generateThumbnail(media).finally(() => {
+    const job = this.generateThumbnail(media).catch(() => undefined).finally(() => {
       this.activeJobs.delete(media.id);
     });
     this.activeJobs.set(media.id, job);
@@ -147,7 +167,7 @@ export class ThumbnailService {
 
   private async generateThumbnail(media: MediaItem): Promise<void> {
     const output = this.thumbnailPath(media.id);
-    if (fs.existsSync(output)) {
+    if (!this.isStale(media)) {
       return;
     }
 
@@ -156,9 +176,12 @@ export class ThumbnailService {
         .resize(this.config.thumbnailSizePx, this.config.thumbnailSizePx, {
           fit: "cover",
           position: "centre",
+          withoutEnlargement: true,
+          fastShrinkOnLoad: true,
         })
         .jpeg({ quality: this.config.videoThumbnailQuality, progressive: true })
         .toFile(output);
+      await this.persistManifestEntry(media);
       return;
     }
 
@@ -174,6 +197,106 @@ export class ThumbnailService {
         .jpeg({ quality: 70 })
         .toFile(output);
     });
+
+    await this.persistManifestEntry(media);
+  }
+
+  private isStale(media: MediaItem): boolean {
+    const output = this.thumbnailPath(media.id);
+    if (!fs.existsSync(output)) {
+      return true;
+    }
+
+    const entry = this.manifest.get(media.id);
+    if (!entry) {
+      return true;
+    }
+
+    const sourceMtimeMs = Date.parse(media.createdAt) || 0;
+    if (entry.relativePath !== media.relativePath) {
+      return true;
+    }
+    if (entry.sourceSize !== media.originalSize) {
+      return true;
+    }
+    if (entry.sourceMtimeMs !== sourceMtimeMs) {
+      return true;
+    }
+    if (entry.settingsSignature !== this.settingsSignature) {
+      return true;
+    }
+
+    return false;
+  }
+
+  private async persistManifestEntry(media: MediaItem): Promise<void> {
+    const sourceMtimeMs = Date.parse(media.createdAt) || 0;
+    this.manifest.set({
+      mediaId: media.id,
+      relativePath: media.relativePath,
+      sourceSize: media.originalSize,
+      sourceMtimeMs,
+      settingsSignature: this.settingsSignature,
+      generatedAt: Date.now(),
+    });
+  }
+
+  private heapPush(entry: QueueEntry): void {
+    this.queue.push(entry);
+    let index = this.queue.length - 1;
+    while (index > 0) {
+      const parent = Math.floor((index - 1) / 2);
+      if (this.compareEntries(this.queue[parent], this.queue[index]) <= 0) {
+        break;
+      }
+      [this.queue[parent], this.queue[index]] = [this.queue[index], this.queue[parent]];
+      index = parent;
+    }
+  }
+
+  private heapPop(): QueueEntry | undefined {
+    if (this.queue.length === 0) {
+      return undefined;
+    }
+
+    const first = this.queue[0];
+    const last = this.queue.pop();
+    if (!last) {
+      return first;
+    }
+    if (this.queue.length === 0) {
+      return first;
+    }
+
+    this.queue[0] = last;
+    let index = 0;
+    while (true) {
+      const left = index * 2 + 1;
+      const right = left + 1;
+      let smallest = index;
+
+      if (left < this.queue.length && this.compareEntries(this.queue[left], this.queue[smallest]) < 0) {
+        smallest = left;
+      }
+      if (right < this.queue.length && this.compareEntries(this.queue[right], this.queue[smallest]) < 0) {
+        smallest = right;
+      }
+      if (smallest === index) {
+        break;
+      }
+
+      [this.queue[index], this.queue[smallest]] = [this.queue[smallest], this.queue[index]];
+      index = smallest;
+    }
+
+    return first;
+  }
+
+  private compareEntries(a: QueueEntry, b: QueueEntry): number {
+    if (a.priority !== b.priority) {
+      return a.priority - b.priority;
+    }
+    return a.sequence - b.sequence;
   }
 
   private async extractVideoFrame(input: string, output: string): Promise<void> {

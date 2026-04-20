@@ -70,5 +70,8 @@ npm run start
 
 - Originals are never modified.
 - Thumbnails and resized files are cached under cache/thumbnails.
+- Thumbnail generation is background-first and startup-safe; the server does not block on full warmup.
+- Thumbnail cache freshness is tracked with a manifest (source path, mtime, size, and processing signature).
+- Unchanged media is skipped on subsequent startups; changed files are regenerated automatically.
 - Videos are streamed as original files; only poster thumbnails are generated.
 - If ffmpeg is not installed or not on PATH, video thumbnail extraction falls back to placeholder thumbnails.
