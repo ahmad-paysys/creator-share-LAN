@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from "express";
+import { AuditStore } from "./audit-store";
 import { SettingsStore } from "./settings-store";
 
 function requirePrivilegedUser(req: Request, res: Response): boolean {
@@ -11,7 +12,11 @@ function requirePrivilegedUser(req: Request, res: Response): boolean {
   return false;
 }
 
-export function registerSettingsRoutes(app: Express, settingsStore: SettingsStore): void {
+export function registerSettingsRoutes(
+  app: Express,
+  settingsStore: SettingsStore,
+  auditStore?: AuditStore,
+): void {
   app.get("/api/admin/settings", (req, res) => {
     if (!requirePrivilegedUser(req, res)) {
       return;
@@ -47,6 +52,19 @@ export function registerSettingsRoutes(app: Express, settingsStore: SettingsStor
     }
 
     const updated = settingsStore.updateVisibilitySettings(payload);
+    auditStore?.insertEvent({
+      actorType: "user",
+      actorUserId: req.auth?.user?.id ?? null,
+      action: "admin.settings.update",
+      targetType: "settings",
+      targetId: "visibility",
+      result: "ok",
+      meta: {
+        folderViewPublic: updated.folderViewPublic,
+        libraryViewPublic: updated.libraryViewPublic,
+      },
+      requestIp: req.ip ?? null,
+    });
     res.json(updated);
   });
 }

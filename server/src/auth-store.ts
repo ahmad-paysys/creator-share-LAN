@@ -243,4 +243,20 @@ export class AuthStore {
       .prepare("UPDATE sessions SET last_seen_at = ? WHERE id = ?")
       .run(new Date().toISOString(), sessionId);
   }
+
+  public countActiveSessions(nowIso: string): number {
+    const row = this.db
+      .prepare("SELECT COUNT(*) as count FROM sessions WHERE expires_at > ?")
+      .get(nowIso) as { count: number };
+
+    return Number(row.count);
+  }
+
+  public countSessionsExpiringBefore(cutoffIso: string, nowIso: string): number {
+    const row = this.db
+      .prepare("SELECT COUNT(*) as count FROM sessions WHERE expires_at > ? AND expires_at <= ?")
+      .get(nowIso, cutoffIso) as { count: number };
+
+    return Number(row.count);
+  }
 }

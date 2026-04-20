@@ -49,4 +49,5 @@ export interface AppConfig {
   bootstrapOwnerPassword: string;
   bootstrapOwnerDisplayName: string;
   tempViewDefaultExpiryHours: number;
+  auditRetentionDays: number;
 }

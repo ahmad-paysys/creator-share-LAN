@@ -4,7 +4,20 @@ import type { AccessResource } from "./access-types";
 import { isLanIp } from "./lan-access";
 import { SettingsStore } from "./settings-store";
 
-export function requireReadAccess(settingsStore: SettingsStore, resource: AccessResource) {
+export function requireReadAccess(
+  settingsStore: SettingsStore,
+  resource: AccessResource,
+  hooks?: {
+    onDecision?: (payload: {
+      allowed: boolean;
+      reason: string;
+      resource: AccessResource;
+      path: string;
+      ip: string;
+      userId: string | null;
+    }) => void;
+  },
+) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const settings = settingsStore.getVisibilitySettings();
     const decision = evaluateAccess({
@@ -21,6 +34,15 @@ export function requireReadAccess(settingsStore: SettingsStore, resource: Access
     };
 
     res.setHeader("X-Authz-Reason", decision.reason);
+
+    hooks?.onDecision?.({
+      allowed: decision.allowed,
+      reason: decision.reason,
+      resource,
+      path: req.path,
+      ip: req.ip ?? "",
+      userId: req.auth?.user?.id ?? null,
+    });
 
     if (!decision.allowed) {
       console.warn(`[AUTHZ] denied resource=${resource} reason=${decision.reason} path=${req.path}`);

@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from "express";
+import { AuditStore } from "./audit-store";
 import { AuthService } from "./auth-service";
 
 function sanitizeDisplayName(value: unknown): string | null {
@@ -20,7 +21,11 @@ function requirePrivilegedUser(req: Request, res: Response): boolean {
   return false;
 }
 
-export function registerAuthRoutes(app: Express, deps: { authService: AuthService; cookieName: string }): void {
+export function registerAuthRoutes(app: Express, deps: {
+  authService: AuthService;
+  cookieName: string;
+  auditStore?: AuditStore;
+}): void {
   app.post("/api/auth/login", async (req, res) => {
     const username = typeof req.body?.username === "string" ? req.body.username.trim() : "";
     const password = typeof req.body?.password === "string" ? req.body.password : "";
@@ -37,6 +42,14 @@ export function registerAuthRoutes(app: Express, deps: { authService: AuthServic
     });
 
     if (!result) {
+      deps.auditStore?.insertEvent({
+        actorType: "anonymous",
+        action: "auth.login",
+        targetType: "user",
+        targetId: username || null,
+        result: "error",
+        requestIp: req.ip ?? null,
+      });
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
@@ -52,13 +65,34 @@ export function registerAuthRoutes(app: Express, deps: { authService: AuthServic
       user: result.user,
       expiresAt: result.expiresAt,
     });
+
+    deps.auditStore?.insertEvent({
+      actorType: "user",
+      actorUserId: result.user.id,
+      action: "auth.login",
+      targetType: "session",
+      targetId: result.user.id,
+      result: "ok",
+      requestIp: req.ip ?? null,
+    });
   });
 
   app.post("/api/auth/logout", (req, res) => {
     const token = req.auth?.sessionToken;
+    const userId = req.auth?.user?.id ?? null;
     if (token) {
       deps.authService.logout(token);
     }
+
+    deps.auditStore?.insertEvent({
+      actorType: userId ? "user" : "anonymous",
+      actorUserId: userId,
+      action: "auth.logout",
+      targetType: "session",
+      targetId: userId,
+      result: "ok",
+      requestIp: req.ip ?? null,
+    });
 
     res.clearCookie(deps.cookieName);
     res.json({ ok: true });
@@ -90,6 +124,16 @@ export function registerAuthRoutes(app: Express, deps: { authService: AuthServic
 
     try {
       const user = await deps.authService.createUser({ username, password, role, displayName });
+      deps.auditStore?.insertEvent({
+        actorType: "user",
+        actorUserId: req.auth?.user?.id ?? null,
+        action: "admin.user.create",
+        targetType: "user",
+        targetId: user.id,
+        result: "ok",
+        meta: { role: user.role, username: user.username },
+        requestIp: req.ip ?? null,
+      });
       res.status(201).json({ user });
     } catch (error) {
       if (error instanceof Error && /UNIQUE constraint failed: users\.username/.test(error.message)) {
@@ -132,6 +176,17 @@ export function registerAuthRoutes(app: Express, deps: { authService: AuthServic
         res.status(404).json({ error: "User not found" });
         return;
       }
+
+      deps.auditStore?.insertEvent({
+        actorType: "user",
+        actorUserId: req.auth?.user?.id ?? null,
+        action: "admin.user.role_update",
+        targetType: "user",
+        targetId: updated.id,
+        result: "ok",
+        meta: { role: updated.role },
+        requestIp: req.ip ?? null,
+      });
 
       res.json({ user: updated });
     } catch (error) {

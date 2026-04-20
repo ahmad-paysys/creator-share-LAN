@@ -232,4 +232,18 @@ export class TemporaryViewStore {
 
     return view.createdBy === user.id;
   }
+
+  public countExpiringBetween(nowIso: string, cutoffIso: string): number {
+    const row = this.db
+      .prepare(
+        `SELECT COUNT(*) as count
+         FROM share_views
+         WHERE revoked_at IS NULL
+           AND expires_at > ?
+           AND expires_at <= ?`,
+      )
+      .get(nowIso, cutoffIso) as { count: number };
+
+    return Number(row.count);
+  }
 }
