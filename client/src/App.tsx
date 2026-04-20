@@ -41,8 +41,30 @@ export default function App() {
   const [includeImages, setIncludeImages] = useState(true);
   const [includeVideos, setIncludeVideos] = useState(true);
   const [imageResizeMb, setImageResizeMb] = useState(2);
+  const [downloadMode, setDownloadMode] = useState<"zip" | "separate">("zip");
   const [progress, setProgress] = useState(0);
   const [busy, setBusy] = useState(false);
+
+  const delay = useCallback((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)), []);
+
+  const fetchBlobWithRetry = useCallback(async (url: string, retries = 2): Promise<Blob> => {
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Failed download (${response.status})`);
+        }
+        return await response.blob();
+      } catch (error) {
+        lastError = error;
+        if (attempt < retries) {
+          await delay(200 * (attempt + 1));
+        }
+      }
+    }
+    throw lastError;
+  }, [delay]);
 
   const selectedItems = useMemo(
     () => items.filter((item) => selected.has(item.id)),
@@ -66,17 +88,30 @@ export default function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && downloadOpen) {
+        event.preventDefault();
+        setDownloadOpen(false);
+        return;
+      }
+
+      if (event.key === "Escape" && lightboxIndex !== null) {
+        event.preventDefault();
+        setLightboxIndex(null);
+        return;
+      }
+
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
         event.preventDefault();
         dispatchSelection({ type: "set-many", ids: items.map((item) => item.id) });
       }
       if (event.key === "Escape") {
+        event.preventDefault();
         dispatchSelection({ type: "clear" });
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [items]);
+  }, [downloadOpen, items, lightboxIndex]);
 
   const handleToggleSelect = useCallback(
     (id: string, index: number, withRange: boolean) => {
@@ -114,27 +149,37 @@ export default function App() {
     setBusy(true);
     setProgress(0);
     try {
-      if (filtered.length === 1) {
-        const single = filtered[0];
-        const href = absoluteUrl(
-          single.type === "image"
-            ? `/media/${single.id}/resized?sizeVmb=${imageResizeMb}&quality=80`
-            : `/media/${single.id}/original`,
-        );
-        window.open(href, "_blank", "noopener,noreferrer");
-      } else {
-        const plan = await createDownloadPlan(
-          filtered.map((item) => ({
-            id: item.id,
-            resizeMb: item.type === "image" ? imageResizeMb : null,
-          })),
-        );
+      const plan = await createDownloadPlan(
+        filtered.map((item) => ({
+          id: item.id,
+          resizeMb: item.type === "image" ? imageResizeMb : null,
+        })),
+      );
 
+      if (filtered.length === 1 || downloadMode === "separate") {
+        const failures: string[] = [];
+        for (let index = 0; index < plan.downloads.length; index += 1) {
+          const file = plan.downloads[index];
+          try {
+            const blob = await fetchBlobWithRetry(absoluteUrl(file.url));
+            saveAs(blob, file.filename);
+          } catch {
+            failures.push(file.filename);
+          }
+          setProgress(Math.round(((index + 1) / plan.downloads.length) * 100));
+          await delay(80);
+        }
+
+        if (failures.length > 0) {
+          window.alert(
+            `Some files could not be downloaded. Failed: ${failures.slice(0, 5).join(", ")}${failures.length > 5 ? "..." : ""}`,
+          );
+        }
+      } else {
         const zip = new JSZip();
         for (let index = 0; index < plan.downloads.length; index += 1) {
           const file = plan.downloads[index];
-          const response = await fetch(absoluteUrl(file.url));
-          const blob = await response.blob();
+          const blob = await fetchBlobWithRetry(absoluteUrl(file.url));
           zip.file(file.filename, blob);
           setProgress(Math.round(((index + 1) / plan.downloads.length) * 100));
         }
@@ -146,7 +191,17 @@ export default function App() {
       setBusy(false);
       setDownloadOpen(false);
     }
-  }, [imageResizeMb, includeImages, includeVideos, selectedItems]);
+  }, [
+    absoluteUrl,
+    createDownloadPlan,
+    delay,
+    downloadMode,
+    fetchBlobWithRetry,
+    imageResizeMb,
+    includeImages,
+    includeVideos,
+    selectedItems,
+  ]);
 
   return (
     <div className="min-h-screen animate-rise px-4 py-6 md:px-8">
@@ -207,7 +262,7 @@ export default function App() {
 
             {busy && (
               <section className="glass rounded-2xl p-3 text-sm text-white">
-                Building download package: {progress}%
+                {downloadMode === "zip" ? "Preparing ZIP package" : "Downloading separate files"}: {progress}%
                 <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/15">
                   <div className="h-full bg-mint transition-all" style={{ width: `${progress}%` }} />
                 </div>
@@ -231,10 +286,12 @@ export default function App() {
         imageResizeMb={imageResizeMb}
         includeImages={includeImages}
         includeVideos={includeVideos}
+        mode={downloadMode}
         onClose={() => setDownloadOpen(false)}
         onConfirm={() => {
           runBatchDownload().catch(console.error);
         }}
+        onModeChange={setDownloadMode}
         onUpdate={(next) => {
           if (typeof next.imageResizeMb === "number") {
             setImageResizeMb(next.imageResizeMb);

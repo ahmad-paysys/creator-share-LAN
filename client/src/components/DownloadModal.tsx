@@ -1,11 +1,15 @@
+import { createPortal } from "react-dom";
+
 interface DownloadModalProps {
   open: boolean;
   imageResizeMb: number;
   includeImages: boolean;
   includeVideos: boolean;
+  mode: "zip" | "separate";
   onClose: () => void;
   onConfirm: () => void;
   onUpdate: (next: { imageResizeMb?: number; includeImages?: boolean; includeVideos?: boolean }) => void;
+  onModeChange: (mode: "zip" | "separate") => void;
 }
 
 export default function DownloadModal({
@@ -13,17 +17,19 @@ export default function DownloadModal({
   imageResizeMb,
   includeImages,
   includeVideos,
+  mode,
   onClose,
   onConfirm,
   onUpdate,
+  onModeChange,
 }: DownloadModalProps) {
   if (!open) {
     return null;
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6">
+      <div className="max-h-[92vh] w-full max-w-md overflow-auto rounded-2xl bg-white p-6">
         <h2 className="text-xl font-semibold text-ink">Batch Download</h2>
         <p className="mt-1 text-sm text-ink/70">Choose how selected files should be exported.</p>
 
@@ -57,15 +63,41 @@ export default function DownloadModal({
           />
         </label>
 
+        <div className="mt-4 rounded-lg bg-sand px-3 py-3 text-sm text-ink">
+          <p className="mb-2 font-medium">Download mode</p>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="download-mode"
+              checked={mode === "zip"}
+              onChange={() => onModeChange("zip")}
+            />
+            Download as one ZIP file
+          </label>
+          <label className="mt-2 flex items-center gap-2">
+            <input
+              type="radio"
+              name="download-mode"
+              checked={mode === "separate"}
+              onChange={() => onModeChange("separate")}
+            />
+            Download as separate files
+          </label>
+          <p className="mt-2 text-xs text-ink/70">
+            Separate-files mode may prompt your browser to allow multiple downloads.
+          </p>
+        </div>
+
         <div className="mt-6 flex items-center justify-end gap-2">
           <button className="rounded-lg border border-ink/20 px-3 py-2 text-sm" onClick={onClose}>
             Cancel
           </button>
           <button className="rounded-lg bg-ocean px-3 py-2 text-sm text-white" onClick={onConfirm}>
-            Download ZIP
+            {mode === "zip" ? "Download ZIP" : "Download Separate Files"}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

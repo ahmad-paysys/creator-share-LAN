@@ -45,9 +45,6 @@ export default function Lightbox({ items, index, onClose, onMove }: LightboxProp
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
       if (event.key === "ArrowRight") {
         onMove(Math.min(items.length - 1, index + 1));
       }
@@ -58,7 +55,7 @@ export default function Lightbox({ items, index, onClose, onMove }: LightboxProp
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [index, items.length, onClose, onMove]);
+  }, [index, items.length, onMove]);
 
   useEffect(() => {
     const next = items[index + 1];
