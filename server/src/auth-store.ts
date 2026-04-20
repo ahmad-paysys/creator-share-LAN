@@ -97,6 +97,32 @@ export class AuthStore {
     return row ? mapStoredUser(row) : null;
   }
 
+  public getUsersByUsernames(usernames: string[]): StoredUser[] {
+    const normalized = Array.from(new Set(usernames.map((entry) => entry.trim()).filter(Boolean)));
+    if (normalized.length === 0) {
+      return [];
+    }
+
+    const placeholders = normalized.map(() => "?").join(", ");
+    const rows = this.db
+      .prepare(
+        `SELECT id, username, display_name, password_hash, role, is_active, created_at, updated_at
+         FROM users WHERE username IN (${placeholders})`,
+      )
+      .all(...normalized) as Array<{
+      id: string;
+      username: string;
+      display_name: string | null;
+      password_hash: string;
+      role: UserRole;
+      is_active: number;
+      created_at: string;
+      updated_at: string;
+    }>;
+
+    return rows.map(mapStoredUser);
+  }
+
   public createSession(input: {
     userId: string;
     tokenHash: string;

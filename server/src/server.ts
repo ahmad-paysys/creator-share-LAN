@@ -12,6 +12,8 @@ import { registerAuthRoutes } from "./auth-routes";
 import { AuthStore } from "./auth-store";
 import { loadConfig } from "./config";
 import { AppDatabase } from "./database";
+import { GalleryStore } from "./gallery-store";
+import { registerGalleryRoutes } from "./gallery-routes";
 import { MediaIndex } from "./media-index";
 import { createTokenBucketRateLimiter } from "./rate-limit";
 import { ResizeService } from "./resize";
@@ -26,6 +28,7 @@ const appDb = new AppDatabase(config.databasePath);
 const authStore = new AuthStore(appDb.connection);
 const authService = new AuthService(authStore, config.authSessionTtlHours);
 const settingsStore = new SettingsStore(appDb.connection);
+const galleryStore = new GalleryStore(appDb.connection);
 
 const mediaIndex = new MediaIndex(config);
 const thumbnailService = new ThumbnailService(config);
@@ -47,6 +50,12 @@ registerAuthRoutes(app, {
   cookieName: config.authCookieName,
 });
 registerSettingsRoutes(app, settingsStore);
+registerGalleryRoutes(app, {
+  galleryStore,
+  authStore,
+  ensureMediaFresh: refreshIndexAndQueue,
+  getMediaById: (id) => mediaIndex.mediaById.get(id),
+});
 
 const limiter = createTokenBucketRateLimiter(100, 100);
 let queuedRevision = -1;

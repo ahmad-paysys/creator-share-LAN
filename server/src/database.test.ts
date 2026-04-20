@@ -46,6 +46,20 @@ describe("database migrations", () => {
 
     rollbackMigrations(db.connection, 1);
 
+    const galleriesTable = db.connection
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'galleries'")
+      .get() as { name: string } | undefined;
+
+    expect(galleriesTable).toBeUndefined();
+
+    const usersStillPresent = db.connection
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'")
+      .get() as { name: string } | undefined;
+
+    expect(usersStillPresent?.name).toBe("users");
+
+    rollbackMigrations(db.connection, 1);
+
     const usersTable = db.connection
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'")
       .get() as { name: string } | undefined;
