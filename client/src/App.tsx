@@ -70,6 +70,10 @@ export default function App() {
     () => items.filter((item) => selected.has(item.id)),
     [items, selected],
   );
+  const selectedCount = selectedItems.length;
+  const totalCount = items.length;
+  const hasAnySelected = selectedCount > 0;
+  const isAllSelected = totalCount > 0 && selectedCount === totalCount;
 
   const loadFolder = useCallback(async (folderId: string, folderPath = "") => {
     const media = await fetchFolderMedia(folderId);
@@ -129,6 +133,17 @@ export default function App() {
     },
     [items, lastClickedIndex, selected],
   );
+
+  const handleSelectAllCurrentView = useCallback(() => {
+    if (items.length === 0) {
+      return;
+    }
+    dispatchSelection({ type: "set-many", ids: items.map((item) => item.id) });
+  }, [items]);
+
+  const handleClearSelection = useCallback(() => {
+    dispatchSelection({ type: "clear" });
+  }, []);
 
   const runBatchDownload = useCallback(async () => {
     const filtered = selectedItems.filter((item) => {
@@ -231,20 +246,33 @@ export default function App() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold text-white">Gallery</h2>
                   <div className="flex flex-wrap items-center gap-2 text-sm text-white/85">
-                    <span>{selected.size} selected</span>
-                    {selected.size > 0 && (
+                    <span className="rounded-full border border-white/20 px-3 py-1 text-white/90">
+                      {selectedCount} / {totalCount} selected
+                    </span>
+
+                    <button
+                      className="rounded-full bg-white/20 px-3 py-1 hover:bg-white/30 disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={handleSelectAllCurrentView}
+                      disabled={isAllSelected || totalCount === 0}
+                    >
+                      Select All
+                    </button>
+
+                    <button
+                      className="rounded-full bg-white/20 px-3 py-1 hover:bg-white/30 disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={handleClearSelection}
+                      disabled={!hasAnySelected}
+                    >
+                      Deselect All
+                    </button>
+
+                    {hasAnySelected && (
                       <>
                         <button
                           className="rounded-full bg-white/20 px-3 py-1 hover:bg-white/30"
                           onClick={() => setDownloadOpen(true)}
                         >
                           Download Selected
-                        </button>
-                        <button
-                          className="rounded-full bg-white/20 px-3 py-1 hover:bg-white/30"
-                          onClick={() => dispatchSelection({ type: "clear" })}
-                        >
-                          Clear
                         </button>
                       </>
                     )}
