@@ -50,7 +50,7 @@ export class ThumbnailService {
     return path.join(this.config.resizedDir, `${mediaId}-${sizeMb}-${quality}.jpg`);
   }
 
-  public async syncMediaCatalog(mediaItems: MediaItem[]): Promise<void> {
+  public async syncMediaCatalog(mediaItems: MediaItem[]): Promise<{ queued: number; stale: number; total: number }> {
     await this.initialize();
     this.ensureWorkers();
 
@@ -61,13 +61,24 @@ export class ThumbnailService {
 
     this.manifest.removeUnknown(new Set(mediaItems.map((media) => media.id)));
 
+    let staleCount = 0;
+    let queuedCount = 0;
     for (const media of mediaItems) {
       if (!this.isStale(media)) {
         continue;
       }
+      staleCount += 1;
       const depth = folderDepth(media.relativePath);
-      this.enqueue(media, 100 + depth * 10);
+      if (this.enqueue(media, 100 + depth * 10)) {
+        queuedCount += 1;
+      }
     }
+
+    return {
+      queued: queuedCount,
+      stale: staleCount,
+      total: mediaItems.length,
+    };
   }
 
   public prioritizeForFolder(mediaItems: MediaItem[]): void {
@@ -76,6 +87,14 @@ export class ThumbnailService {
       const depth = folderDepth(media.relativePath);
       this.enqueue(media, depth);
     }
+  }
+
+  public getQueueStats(): { queued: number; active: number; tracked: number } {
+    return {
+      queued: this.queuedPriorities.size,
+      active: this.activeJobs.size,
+      tracked: this.mediaById.size,
+    };
   }
 
   public async ensureThumbnail(media: MediaItem): Promise<string> {
@@ -110,18 +129,19 @@ export class ThumbnailService {
     }
   }
 
-  private enqueue(media: MediaItem, priority: number): void {
+  private enqueue(media: MediaItem, priority: number): boolean {
     if (!this.isStale(media)) {
-      return;
+      return false;
     }
 
     const existingPriority = this.queuedPriorities.get(media.id);
     if (typeof existingPriority === "number" && existingPriority <= priority) {
-      return;
+      return false;
     }
 
     this.queuedPriorities.set(media.id, priority);
     this.heapPush({ media, priority, sequence: this.sequence++ });
+    return true;
   }
 
   private popNext(): QueueEntry | undefined {

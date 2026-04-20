@@ -32,3 +32,15 @@ export interface DownloadResponse {
     filename: string;
   }>;
 }
+
+export interface SyncStatus {
+  state: "idle" | "scanning" | "updated";
+  revision: number;
+  mediaCount: number;
+  newMediaCount: number;
+  lastScanAt: number;
+  queued: number;
+  active: number;
+  pendingThumbnails: number;
+  indexDirty: boolean;
+}
