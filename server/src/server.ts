@@ -15,6 +15,9 @@ import { AppDatabase } from "./database";
 import { GalleryStore } from "./gallery-store";
 import { registerGalleryRoutes } from "./gallery-routes";
 import { MediaIndex } from "./media-index";
+import { registerReconciliationRoutes } from "./reconciliation-routes";
+import { ReconciliationService } from "./reconciliation-service";
+import { ReconciliationStore } from "./reconciliation-store";
 import { createTokenBucketRateLimiter } from "./rate-limit";
 import { ResizeService } from "./resize";
 import { registerSettingsRoutes } from "./settings-routes";
@@ -22,6 +25,7 @@ import { SettingsStore } from "./settings-store";
 import { registerTemporaryViewRoutes } from "./temporary-view-routes";
 import { TemporaryViewStore } from "./temporary-view-store";
 import { ThumbnailService } from "./thumbnail-service";
+import type { MediaItem } from "./types";
 
 const config = loadConfig();
 const app = express();
@@ -32,6 +36,8 @@ const authService = new AuthService(authStore, config.authSessionTtlHours);
 const settingsStore = new SettingsStore(appDb.connection);
 const galleryStore = new GalleryStore(appDb.connection);
 const temporaryViewStore = new TemporaryViewStore(appDb.connection);
+const reconciliationStore = new ReconciliationStore(appDb.connection);
+const reconciliationService = new ReconciliationService(reconciliationStore);
 
 const mediaIndex = new MediaIndex(config);
 const thumbnailService = new ThumbnailService(config);
@@ -67,6 +73,18 @@ registerTemporaryViewRoutes(app, {
   getMediaById: (id) => mediaIndex.mediaById.get(id),
   defaultExpiryHours: config.tempViewDefaultExpiryHours,
 });
+let previousMediaSnapshot = new Map<string, MediaItem>();
+
+registerReconciliationRoutes(app, {
+  reconciliationStore,
+  reconciliationService,
+  ensureMediaFresh: refreshIndexAndQueue,
+  getCurrentMediaSnapshot: () => new Map(mediaIndex.mediaById.entries()),
+  getPreviousMediaSnapshot: () => new Map(previousMediaSnapshot.entries()),
+  setPreviousMediaSnapshot: (snapshot) => {
+    previousMediaSnapshot = new Map(snapshot.entries());
+  },
+});
 
 const requireLibraryReadAccess = requireReadAccess(settingsStore, "folder_library");
 
@@ -92,6 +110,10 @@ async function refreshIndexAndQueue(): Promise<void> {
   syncStatus.indexDirty = mediaIndex.isDirty();
   const revision = mediaIndex.getRevision();
 
+  if (previousMediaSnapshot.size === 0 && mediaIndex.mediaById.size > 0) {
+    previousMediaSnapshot = new Map(mediaIndex.mediaById.entries());
+  }
+
   if (!changed && revision === queuedRevision) {
     const queueStats = thumbnailService.getQueueStats();
     syncStatus.queued = queueStats.queued;
@@ -101,6 +123,16 @@ async function refreshIndexAndQueue(): Promise<void> {
   }
 
   syncStatus.state = "scanning";
+  const currentMediaSnapshot = new Map(mediaIndex.mediaById.entries());
+  if (previousMediaSnapshot.size > 0) {
+    reconciliationService.reconcile({
+      previousMediaById: previousMediaSnapshot,
+      currentMediaById: currentMediaSnapshot,
+      triggerReason: "index_refresh",
+    });
+  }
+  previousMediaSnapshot = currentMediaSnapshot;
+
   const mediaItems = Array.from(mediaIndex.mediaById.values());
 
   let newMediaCount = 0;
@@ -296,6 +328,7 @@ async function bootstrap() {
   });
 
   await mediaIndex.init();
+  previousMediaSnapshot = new Map(mediaIndex.mediaById.entries());
   await refreshIndexAndQueue();
 
   app.listen(config.port, "0.0.0.0", () => {

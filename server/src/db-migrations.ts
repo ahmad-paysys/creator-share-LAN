@@ -178,4 +178,63 @@ export const DB_MIGRATIONS: DbMigration[] = [
       DROP TABLE IF EXISTS share_views;
     `,
   },
+  {
+    version: 4,
+    name: "media_reconciliation_domain",
+    upSql: `
+      CREATE TABLE IF NOT EXISTS reconciliation_runs (
+        id TEXT PRIMARY KEY,
+        status TEXT NOT NULL CHECK(status IN ('success','partial','failed')),
+        trigger_reason TEXT NOT NULL,
+        previous_media_count INTEGER NOT NULL,
+        current_media_count INTEGER NOT NULL,
+        remap_count INTEGER NOT NULL,
+        unresolved_count INTEGER NOT NULL,
+        started_at TEXT NOT NULL,
+        completed_at TEXT NOT NULL,
+        summary_json TEXT
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_reconciliation_runs_completed_at ON reconciliation_runs(completed_at);
+
+      CREATE TABLE IF NOT EXISTS media_id_remaps (
+        id TEXT PRIMARY KEY,
+        run_id TEXT NOT NULL,
+        old_media_id TEXT NOT NULL,
+        new_media_id TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        confidence REAL NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(run_id) REFERENCES reconciliation_runs(id) ON DELETE CASCADE,
+        UNIQUE(old_media_id, new_media_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_media_id_remaps_run_id ON media_id_remaps(run_id);
+
+      CREATE TABLE IF NOT EXISTS reconciliation_unresolved (
+        media_id TEXT PRIMARY KEY,
+        first_seen_at TEXT NOT NULL,
+        last_seen_at TEXT NOT NULL,
+        occurrences INTEGER NOT NULL DEFAULT 1,
+        gallery_ref_count INTEGER NOT NULL DEFAULT 0,
+        view_ref_count INTEGER NOT NULL DEFAULT 0,
+        last_run_id TEXT,
+        resolved_at TEXT,
+        resolution_note TEXT,
+        FOREIGN KEY(last_run_id) REFERENCES reconciliation_runs(id) ON DELETE SET NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_reconciliation_unresolved_last_seen ON reconciliation_unresolved(last_seen_at);
+      CREATE INDEX IF NOT EXISTS idx_reconciliation_unresolved_resolved_at ON reconciliation_unresolved(resolved_at);
+    `,
+    downSql: `
+      DROP INDEX IF EXISTS idx_reconciliation_unresolved_resolved_at;
+      DROP INDEX IF EXISTS idx_reconciliation_unresolved_last_seen;
+      DROP TABLE IF EXISTS reconciliation_unresolved;
+      DROP INDEX IF EXISTS idx_media_id_remaps_run_id;
+      DROP TABLE IF EXISTS media_id_remaps;
+      DROP INDEX IF EXISTS idx_reconciliation_runs_completed_at;
+      DROP TABLE IF EXISTS reconciliation_runs;
+    `,
+  },
 ];
