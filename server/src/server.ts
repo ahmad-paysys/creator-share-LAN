@@ -1,10 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import compression from "compression";
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import mime from "mime-types";
+import { AuthService } from "./auth-service";
+import { authContextMiddleware } from "./auth-middleware";
+import { registerAuthRoutes } from "./auth-routes";
+import { AuthStore } from "./auth-store";
 import { loadConfig } from "./config";
+import { AppDatabase } from "./database";
 import { MediaIndex } from "./media-index";
 import { createTokenBucketRateLimiter } from "./rate-limit";
 import { ResizeService } from "./resize";
@@ -12,6 +18,10 @@ import { ThumbnailService } from "./thumbnail-service";
 
 const config = loadConfig();
 const app = express();
+
+const appDb = new AppDatabase(config.databasePath);
+const authStore = new AuthStore(appDb.connection);
+const authService = new AuthService(authStore, config.authSessionTtlHours);
 
 const mediaIndex = new MediaIndex(config);
 const thumbnailService = new ThumbnailService(config);
@@ -24,7 +34,14 @@ const corsOrigin =
 
 app.use(cors({ origin: corsOrigin }));
 app.use(compression());
+app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
+app.use(authContextMiddleware(authService, config.authCookieName));
+
+registerAuthRoutes(app, {
+  authService,
+  cookieName: config.authCookieName,
+});
 
 const limiter = createTokenBucketRateLimiter(100, 100);
 let queuedRevision = -1;
@@ -242,6 +259,13 @@ if (fs.existsSync(clientDist)) {
 }
 
 async function bootstrap() {
+  appDb.init();
+  await authService.bootstrapOwnerIfNeeded({
+    username: config.bootstrapOwnerUsername,
+    password: config.bootstrapOwnerPassword,
+    displayName: config.bootstrapOwnerDisplayName,
+  });
+
   await mediaIndex.init();
   await refreshIndexAndQueue();
 

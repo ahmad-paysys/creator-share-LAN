@@ -16,6 +16,12 @@ const DEFAULTS = {
   RECURSIVE_SCAN: "true",
   MAX_CONCURRENT_RESIZE_JOBS: 4,
   THUMBNAIL_CACHE_DIR: "./cache/thumbnails",
+  DATABASE_PATH: "./server/data/app.db",
+  AUTH_SESSION_TTL_HOURS: 12,
+  AUTH_COOKIE_NAME: "creator_session",
+  BOOTSTRAP_OWNER_USERNAME: "",
+  BOOTSTRAP_OWNER_PASSWORD: "",
+  BOOTSTRAP_OWNER_DISPLAY_NAME: "Owner",
   EXPOSE_TO_LAN: "true",
   CORS_ALLOWED_ORIGINS: "*",
   VITE_API_BASE_URL: "http://localhost:3000",
@@ -84,6 +90,10 @@ export function loadConfig(): AppConfig {
     process.env.THUMBNAIL_CACHE_DIR ?? DEFAULTS.THUMBNAIL_CACHE_DIR,
     workspaceRoot,
   );
+  const databasePath = resolveConfigPath(
+    process.env.DATABASE_PATH ?? DEFAULTS.DATABASE_PATH,
+    workspaceRoot,
+  );
 
   if (!fs.existsSync(mediaRootPath)) {
     fs.mkdirSync(mediaRootPath, { recursive: true });
@@ -125,5 +135,12 @@ export function loadConfig(): AppConfig {
     resizedDir,
     exposeToLan: parseBool(process.env.EXPOSE_TO_LAN ?? DEFAULTS.EXPOSE_TO_LAN),
     corsAllowedOrigins,
+    databasePath,
+    authSessionTtlHours: Number(process.env.AUTH_SESSION_TTL_HOURS ?? DEFAULTS.AUTH_SESSION_TTL_HOURS),
+    authCookieName: process.env.AUTH_COOKIE_NAME ?? DEFAULTS.AUTH_COOKIE_NAME,
+    bootstrapOwnerUsername: process.env.BOOTSTRAP_OWNER_USERNAME ?? DEFAULTS.BOOTSTRAP_OWNER_USERNAME,
+    bootstrapOwnerPassword: process.env.BOOTSTRAP_OWNER_PASSWORD ?? DEFAULTS.BOOTSTRAP_OWNER_PASSWORD,
+    bootstrapOwnerDisplayName:
+      process.env.BOOTSTRAP_OWNER_DISPLAY_NAME ?? DEFAULTS.BOOTSTRAP_OWNER_DISPLAY_NAME,
   };
 }
