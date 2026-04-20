@@ -1,9 +1,32 @@
-import type { DownloadRequestItem, DownloadResponse, FolderNode, MediaItem, SyncStatus } from "./types";
+import type {
+  DownloadRequestItem,
+  DownloadResponse,
+  FolderNode,
+  GalleryDetail,
+  GalleryListItem,
+  MediaItem,
+  SafeUser,
+  SyncStatus,
+  TemporaryViewDetail,
+  UserRole,
+  VisibilitySettings,
+} from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, init);
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+  return (await response.json()) as T;
+}
+
+async function requestOrNull<T>(path: string, init?: RequestInit): Promise<T | null> {
+  const response = await fetch(`${API_BASE}${path}`, init);
+  if (response.status === 401) {
+    return null;
+  }
   if (!response.ok) {
     throw new Error(`Request failed: ${response.status}`);
   }
@@ -34,4 +57,117 @@ export function createDownloadPlan(items: DownloadRequestItem[]): Promise<Downlo
 
 export function absoluteUrl(path: string): string {
   return `${API_BASE}${path}`;
+}
+
+export async function fetchCurrentUser(): Promise<SafeUser | null> {
+  const response = await requestOrNull<{ user: SafeUser }>("/api/auth/me");
+  return response?.user ?? null;
+}
+
+export function login(username: string, password: string): Promise<{ user: SafeUser; expiresAt: string }> {
+  return request<{ user: SafeUser; expiresAt: string }>("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+export function logout(): Promise<{ ok: true }> {
+  return request<{ ok: true }>("/api/auth/logout", {
+    method: "POST",
+  });
+}
+
+export function fetchAdminSettings(): Promise<VisibilitySettings> {
+  return request<VisibilitySettings>("/api/admin/settings");
+}
+
+export function updateAdminSettings(input: Partial<VisibilitySettings>): Promise<VisibilitySettings> {
+  return request<VisibilitySettings>("/api/admin/settings", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function listAdminUsers(): Promise<{ users: SafeUser[] }> {
+  return request<{ users: SafeUser[] }>("/api/admin/users");
+}
+
+export function createAdminUser(input: {
+  username: string;
+  password: string;
+  displayName?: string;
+  role: UserRole;
+}): Promise<{ user: SafeUser }> {
+  return request<{ user: SafeUser }>("/api/admin/users", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateAdminUserRole(userId: string, role: UserRole): Promise<{ user: SafeUser }> {
+  return request<{ user: SafeUser }>(`/api/admin/users/${userId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ role }),
+  });
+}
+
+export function listGalleries(): Promise<{ galleries: GalleryListItem[] }> {
+  return request<{ galleries: GalleryListItem[] }>("/api/galleries");
+}
+
+export function getGallery(slug: string): Promise<{ gallery: GalleryDetail }> {
+  return request<{ gallery: GalleryDetail }>(`/api/gallery/${encodeURIComponent(slug)}`);
+}
+
+export function createGallery(input: {
+  slug: string;
+  title: string;
+  description?: string;
+  visibility: "public" | "private";
+}): Promise<{ gallery: GalleryDetail }> {
+  return request<{ gallery: GalleryDetail }>("/api/galleries", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateGalleryAccess(input: {
+  slug: string;
+  roleShares: UserRole[];
+  userShares: string[];
+}): Promise<{ gallery: GalleryDetail }> {
+  return request<{ gallery: GalleryDetail }>(`/api/gallery/${encodeURIComponent(input.slug)}/access`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      roleShares: input.roleShares,
+      userShares: input.userShares,
+    }),
+  });
+}
+
+export function createTemporaryView(input: {
+  slug: string;
+  title: string;
+  visibility: "public" | "private";
+  expiresInHours?: number;
+  mediaIds?: string[];
+  gallerySlug?: string;
+}): Promise<{ view: TemporaryViewDetail }> {
+  return request<{ view: TemporaryViewDetail }>("/api/views", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function revokeTemporaryView(slug: string): Promise<{ view: TemporaryViewDetail }> {
+  return request<{ view: TemporaryViewDetail }>(`/api/view/${encodeURIComponent(slug)}/revoke`, {
+    method: "POST",
+  });
 }

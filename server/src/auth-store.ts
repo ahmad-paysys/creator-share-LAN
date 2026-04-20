@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
-import type { AuthenticatedSession, SessionRecord, StoredUser, UserRole } from "./auth-types";
+import type { AuthenticatedSession, SafeUser, SessionRecord, StoredUser, UserRole } from "./auth-types";
+import { toSafeUser } from "./auth-types";
 
 function mapStoredUser(row: {
   id: string;
@@ -121,6 +122,41 @@ export class AuthStore {
     }>;
 
     return rows.map(mapStoredUser);
+  }
+
+  public listUsers(): SafeUser[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, username, display_name, password_hash, role, is_active, created_at, updated_at
+         FROM users
+         WHERE is_active = 1
+         ORDER BY created_at ASC`,
+      )
+      .all() as Array<{
+      id: string;
+      username: string;
+      display_name: string | null;
+      password_hash: string;
+      role: UserRole;
+      is_active: number;
+      created_at: string;
+      updated_at: string;
+    }>;
+
+    return rows.map((row) => toSafeUser(mapStoredUser(row)));
+  }
+
+  public updateUserRole(userId: string, role: UserRole): SafeUser | null {
+    const result = this.db
+      .prepare("UPDATE users SET role = ?, updated_at = ? WHERE id = ? AND is_active = 1")
+      .run(role, new Date().toISOString(), userId);
+
+    if (result.changes === 0) {
+      return null;
+    }
+
+    const updated = this.getUserById(userId);
+    return updated ? toSafeUser(updated) : null;
   }
 
   public createSession(input: {

@@ -100,4 +100,48 @@ export function registerAuthRoutes(app: Express, deps: { authService: AuthServic
       res.status(400).json({ error: error instanceof Error ? error.message : "Could not create user" });
     }
   });
+
+  app.get("/api/admin/users", (req, res) => {
+    if (!requirePrivilegedUser(req, res)) {
+      return;
+    }
+
+    res.json({ users: deps.authService.listUsers() });
+  });
+
+  app.patch("/api/admin/users/:userId", async (req, res) => {
+    if (!requirePrivilegedUser(req, res)) {
+      return;
+    }
+
+    const userId = String(req.params.userId);
+    const role = typeof req.body?.role === "string" ? req.body.role : "";
+    if (!role) {
+      res.status(400).json({ error: "role is required" });
+      return;
+    }
+
+    try {
+      const updated = await deps.authService.updateUserRole({
+        actorUserId: req.auth!.user!.id,
+        targetUserId: userId,
+        role,
+      });
+
+      if (!updated) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      res.json({ user: updated });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not update user role";
+      if (message === "Forbidden") {
+        res.status(403).json({ error: message });
+        return;
+      }
+
+      res.status(400).json({ error: message });
+    }
+  });
 }

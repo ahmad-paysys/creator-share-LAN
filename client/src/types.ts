@@ -44,3 +44,55 @@ export interface SyncStatus {
   pendingThumbnails: number;
   indexDirty: boolean;
 }
+
+export type UserRole = "owner" | "admin" | "editor" | "viewer";
+
+export interface SafeUser {
+  id: string;
+  username: string;
+  displayName: string | null;
+  role: UserRole;
+}
+
+export interface VisibilitySettings {
+  folderViewPublic: boolean;
+  libraryViewPublic: boolean;
+}
+
+export interface GalleryListItem {
+  slug: string;
+  title: string;
+  description: string | null;
+  visibility: "public" | "private";
+  updatedAt: string;
+  itemCount: number;
+}
+
+export interface GalleryDetail {
+  slug: string;
+  title: string;
+  description: string | null;
+  visibility: "public" | "private";
+  access: {
+    roleShares: UserRole[];
+    userShares: string[];
+  };
+  items: MediaItem[];
+  missingMediaIds: string[];
+  updatedAt: string;
+}
+
+export interface TemporaryViewDetail {
+  slug: string;
+  title: string;
+  visibility: "public" | "private";
+  sourceType: "selection" | "gallery";
+  sourceGalleryId: string | null;
+  expiresAt: string;
+  maxUses: number | null;
+  usesCount: number;
+  revokedAt: string | null;
+  items: MediaItem[];
+  missingMediaIds: string[];
+  updatedAt: string;
+}

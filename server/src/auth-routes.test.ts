@@ -78,6 +78,19 @@ describe("auth routes", () => {
     expect(createdUser.status).toBe(201);
     expect(createdUser.body.user.username).toBe("viewer1");
 
+    const listedUsers = await request(app).get("/api/admin/users").set("Cookie", sessionCookie);
+    expect(listedUsers.status).toBe(200);
+    expect(Array.isArray(listedUsers.body.users)).toBe(true);
+    const viewerUser = listedUsers.body.users.find((user: { username: string }) => user.username === "viewer1");
+    expect(viewerUser).toBeDefined();
+
+    const promoted = await request(app)
+      .patch(`/api/admin/users/${viewerUser.id}`)
+      .set("Cookie", sessionCookie)
+      .send({ role: "editor" });
+    expect(promoted.status).toBe(200);
+    expect(promoted.body.user.role).toBe("editor");
+
     const logout = await request(app).post("/api/auth/logout").set("Cookie", sessionCookie);
     expect(logout.status).toBe(200);
 
@@ -92,5 +105,67 @@ describe("auth routes", () => {
     });
 
     expect(response.status).toBe(404);
+  });
+
+  it("enforces admin role assignment guardrails", async () => {
+    const ownerLogin = await request(app).post("/api/auth/login").send({
+      username: "owner",
+      password: "VeryStrongPassword1",
+    });
+
+    const ownerCookieRaw = ownerLogin.headers["set-cookie"];
+    const ownerCookie = Array.isArray(ownerCookieRaw)
+      ? ownerCookieRaw[0].split(";")[0]
+      : String(ownerCookieRaw).split(";")[0];
+
+    const adminUser = await request(app)
+      .post("/api/admin/users")
+      .set("Cookie", ownerCookie)
+      .send({
+        username: "admin1",
+        password: "VeryStrongPassword2",
+        role: "admin",
+      });
+
+    const viewerUser = await request(app)
+      .post("/api/admin/users")
+      .set("Cookie", ownerCookie)
+      .send({
+        username: "viewer2",
+        password: "VeryStrongPassword3",
+        role: "viewer",
+      });
+
+    const adminLogin = await request(app).post("/api/auth/login").send({
+      username: "admin1",
+      password: "VeryStrongPassword2",
+    });
+
+    const adminCookieRaw = adminLogin.headers["set-cookie"];
+    const adminCookie = Array.isArray(adminCookieRaw)
+      ? adminCookieRaw[0].split(";")[0]
+      : String(adminCookieRaw).split(";")[0];
+
+    const cannotPromoteOwner = await request(app)
+      .patch(`/api/admin/users/${adminUser.body.user.id}`)
+      .set("Cookie", adminCookie)
+      .send({ role: "owner" });
+
+    expect(cannotPromoteOwner.status).toBe(400);
+
+    const cannotDemoteOwner = await request(app)
+      .patch(`/api/admin/users/${ownerLogin.body.user.id}`)
+      .set("Cookie", ownerCookie)
+      .send({ role: "admin" });
+
+    expect(cannotDemoteOwner.status).toBe(400);
+
+    const adminCanPromoteViewer = await request(app)
+      .patch(`/api/admin/users/${viewerUser.body.user.id}`)
+      .set("Cookie", adminCookie)
+      .send({ role: "editor" });
+
+    expect(adminCanPromoteViewer.status).toBe(200);
+    expect(adminCanPromoteViewer.body.user.role).toBe("editor");
   });
 });
