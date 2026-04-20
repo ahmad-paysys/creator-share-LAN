@@ -42,4 +42,10 @@ export interface AppConfig {
   resizedDir: string;
   exposeToLan: boolean;
   corsAllowedOrigins: string[];
+  databasePath: string;
+  authSessionTtlHours: number;
+  authCookieName: string;
+  bootstrapOwnerUsername: string;
+  bootstrapOwnerPassword: string;
+  bootstrapOwnerDisplayName: string;
 }
