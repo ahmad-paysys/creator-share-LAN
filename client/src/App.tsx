@@ -76,6 +76,15 @@ function hasFolderId(root: FolderNode, folderId: string): boolean {
   return false;
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  const tag = target.tagName;
+  return target.isContentEditable || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+}
+
 export default function App() {
   const [folderTree, setFolderTree] = useState<FolderNode | null>(null);
   const [activeFolderId, setActiveFolderId] = useState("root");
@@ -170,7 +179,7 @@ export default function App() {
       params.set("folder", activeFolderId);
     }
 
-    const selectedIdsForUrl = selectedItems.map((item) => item.id).slice(0, 400);
+    const selectedIdsForUrl = selectedItems.map((item) => item.id).slice(0, 100);
     if (selectedIdsForUrl.length > 0) {
       params.set("sel", selectedIdsForUrl.join(","));
     } else {
@@ -247,6 +256,9 @@ export default function App() {
       }
 
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
+        if (isEditableTarget(event.target)) {
+          return;
+        }
         event.preventDefault();
         dispatchSelection({ type: "set-many", ids: items.map((item) => item.id) });
       }
