@@ -10,6 +10,19 @@ interface LightboxProps {
   onMove: (nextIndex: number) => void;
 }
 
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (target.isContentEditable) {
+    return true;
+  }
+
+  const tag = target.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON" || tag === "A" || tag === "VIDEO";
+}
+
 export default function Lightbox({ items, index, onClose, onMove }: LightboxProps) {
   const item = items[index];
   const touchStartX = useRef<number | null>(null);
@@ -83,6 +96,9 @@ export default function Lightbox({ items, index, onClose, onMove }: LightboxProp
         }
       }
       if (event.key === " ") {
+        if (isInteractiveTarget(event.target)) {
+          return;
+        }
         event.preventDefault();
         setSlideshowEnabled((prev) => !prev);
       }
