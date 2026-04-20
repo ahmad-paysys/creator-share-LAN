@@ -152,7 +152,7 @@ export default function App() {
     <div className="min-h-screen animate-rise px-4 py-6 md:px-8">
       <div className="mx-auto max-w-[1600px] space-y-6">
         <header className="glass rounded-3xl p-6 shadow-glow">
-          <h1 className="hero-title text-3xl md:text-5xl">Creator Share LAN</h1>
+          <h1 className="hero-title">Creator Share LAN</h1>
           <p className="mt-2 text-sm text-white/80">
             Wedding photo and video delivery on your local network.
           </p>
@@ -172,26 +172,28 @@ export default function App() {
 
           <main className="space-y-4">
             <section className="glass rounded-3xl p-4 shadow-glow">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold text-white">Gallery</h2>
-                <div className="flex items-center gap-2 text-sm text-white/85">
-                  <span>{selected.size} selected</span>
-                  {selected.size > 0 && (
-                    <>
-                      <button
-                        className="rounded-full bg-white/20 px-3 py-1 hover:bg-white/30"
-                        onClick={() => setDownloadOpen(true)}
-                      >
-                        Download Selected
-                      </button>
-                      <button
-                        className="rounded-full bg-white/20 px-3 py-1 hover:bg-white/30"
-                        onClick={() => dispatchSelection({ type: "clear" })}
-                      >
-                        Clear
-                      </button>
-                    </>
-                  )}
+              <div className="sticky top-2 z-20 mb-3 rounded-2xl bg-ink/70 p-3 backdrop-blur">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-lg font-semibold text-white">Gallery</h2>
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-white/85">
+                    <span>{selected.size} selected</span>
+                    {selected.size > 0 && (
+                      <>
+                        <button
+                          className="rounded-full bg-white/20 px-3 py-1 hover:bg-white/30"
+                          onClick={() => setDownloadOpen(true)}
+                        >
+                          Download Selected
+                        </button>
+                        <button
+                          className="rounded-full bg-white/20 px-3 py-1 hover:bg-white/30"
+                          onClick={() => dispatchSelection({ type: "clear" })}
+                        >
+                          Clear
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
