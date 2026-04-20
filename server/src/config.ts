@@ -19,6 +19,7 @@ const DEFAULTS = {
   DATABASE_PATH: "./server/data/app.db",
   AUTH_SESSION_TTL_HOURS: 12,
   AUTH_COOKIE_NAME: "creator_session",
+  TEMP_VIEW_DEFAULT_EXPIRY_HOURS: 24,
   BOOTSTRAP_OWNER_USERNAME: "",
   BOOTSTRAP_OWNER_PASSWORD: "",
   BOOTSTRAP_OWNER_DISPLAY_NAME: "Owner",
@@ -138,6 +139,9 @@ export function loadConfig(): AppConfig {
     databasePath,
     authSessionTtlHours: Number(process.env.AUTH_SESSION_TTL_HOURS ?? DEFAULTS.AUTH_SESSION_TTL_HOURS),
     authCookieName: process.env.AUTH_COOKIE_NAME ?? DEFAULTS.AUTH_COOKIE_NAME,
+    tempViewDefaultExpiryHours: Number(
+      process.env.TEMP_VIEW_DEFAULT_EXPIRY_HOURS ?? DEFAULTS.TEMP_VIEW_DEFAULT_EXPIRY_HOURS,
+    ),
     bootstrapOwnerUsername: process.env.BOOTSTRAP_OWNER_USERNAME ?? DEFAULTS.BOOTSTRAP_OWNER_USERNAME,
     bootstrapOwnerPassword: process.env.BOOTSTRAP_OWNER_PASSWORD ?? DEFAULTS.BOOTSTRAP_OWNER_PASSWORD,
     bootstrapOwnerDisplayName:

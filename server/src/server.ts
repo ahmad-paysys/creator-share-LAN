@@ -19,6 +19,8 @@ import { createTokenBucketRateLimiter } from "./rate-limit";
 import { ResizeService } from "./resize";
 import { registerSettingsRoutes } from "./settings-routes";
 import { SettingsStore } from "./settings-store";
+import { registerTemporaryViewRoutes } from "./temporary-view-routes";
+import { TemporaryViewStore } from "./temporary-view-store";
 import { ThumbnailService } from "./thumbnail-service";
 
 const config = loadConfig();
@@ -29,6 +31,7 @@ const authStore = new AuthStore(appDb.connection);
 const authService = new AuthService(authStore, config.authSessionTtlHours);
 const settingsStore = new SettingsStore(appDb.connection);
 const galleryStore = new GalleryStore(appDb.connection);
+const temporaryViewStore = new TemporaryViewStore(appDb.connection);
 
 const mediaIndex = new MediaIndex(config);
 const thumbnailService = new ThumbnailService(config);
@@ -55,6 +58,14 @@ registerGalleryRoutes(app, {
   authStore,
   ensureMediaFresh: refreshIndexAndQueue,
   getMediaById: (id) => mediaIndex.mediaById.get(id),
+});
+registerTemporaryViewRoutes(app, {
+  temporaryViewStore,
+  galleryStore,
+  authStore,
+  ensureMediaFresh: refreshIndexAndQueue,
+  getMediaById: (id) => mediaIndex.mediaById.get(id),
+  defaultExpiryHours: config.tempViewDefaultExpiryHours,
 });
 
 const limiter = createTokenBucketRateLimiter(100, 100);
