@@ -70,4 +70,65 @@ export const DB_MIGRATIONS: DbMigration[] = [
       DROP TABLE IF EXISTS users;
     `,
   },
+  {
+    version: 2,
+    name: "gallery_core_domain",
+    upSql: `
+      CREATE TABLE IF NOT EXISTS galleries (
+        id TEXT PRIMARY KEY,
+        slug TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        description TEXT,
+        visibility TEXT NOT NULL CHECK(visibility IN ('public','private')),
+        created_by TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_galleries_visibility ON galleries(visibility);
+      CREATE INDEX IF NOT EXISTS idx_galleries_is_deleted ON galleries(is_deleted);
+
+      CREATE TABLE IF NOT EXISTS gallery_items (
+        id TEXT PRIMARY KEY,
+        gallery_id TEXT NOT NULL,
+        media_id TEXT NOT NULL,
+        order_index INTEGER NOT NULL,
+        added_by TEXT,
+        added_at TEXT NOT NULL,
+        FOREIGN KEY(gallery_id) REFERENCES galleries(id) ON DELETE CASCADE,
+        FOREIGN KEY(added_by) REFERENCES users(id) ON DELETE SET NULL,
+        UNIQUE(gallery_id, media_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_gallery_items_gallery_id ON gallery_items(gallery_id);
+
+      CREATE TABLE IF NOT EXISTS gallery_access (
+        id TEXT PRIMARY KEY,
+        gallery_id TEXT NOT NULL,
+        subject_type TEXT NOT NULL CHECK(subject_type IN ('role','user')),
+        subject_value TEXT NOT NULL,
+        permission TEXT NOT NULL CHECK(permission IN ('view')),
+        created_by TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(gallery_id) REFERENCES galleries(id) ON DELETE CASCADE,
+        FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL,
+        UNIQUE(gallery_id, subject_type, subject_value, permission)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_gallery_access_gallery_id ON gallery_access(gallery_id);
+      CREATE INDEX IF NOT EXISTS idx_gallery_access_subject ON gallery_access(subject_type, subject_value);
+    `,
+    downSql: `
+      DROP INDEX IF EXISTS idx_gallery_access_subject;
+      DROP INDEX IF EXISTS idx_gallery_access_gallery_id;
+      DROP TABLE IF EXISTS gallery_access;
+      DROP INDEX IF EXISTS idx_gallery_items_gallery_id;
+      DROP TABLE IF EXISTS gallery_items;
+      DROP INDEX IF EXISTS idx_galleries_is_deleted;
+      DROP INDEX IF EXISTS idx_galleries_visibility;
+      DROP TABLE IF EXISTS galleries;
+    `,
+  },
 ];
