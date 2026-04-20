@@ -8,6 +8,7 @@ LAN-focused photo and video sharing app for wedding media delivery.
 - Contribution guide: CONTRIBUTING.md
 - Security reporting: SECURITY.md
 - CI pipeline: .github/workflows/ci.yml
+- Branch governance: main accepts changes through pull requests only and requires code owner approval.
 
 ## Stack
 
@@ -58,6 +59,20 @@ npm run start
 - Set EXPOSE_TO_LAN=true in .env.
 - Open firewall using instructions in FIREWALL_SETUP.md.
 - Access from another device using http://<host-lan-ip>:3000.
+
+## Recent Features
+
+- Shareable LAN view links: copy current folder and selection state into a URL query so clients can open the same view quickly.
+- Smart background sync indicator: live sync state badge and toast notifications for newly indexed media.
+- Slideshow and kiosk mode: in-lightbox playback controls with fullscreen kiosk support.
+
+## Maintainer Workflow
+
+- The main branch is protected and cannot be pushed directly.
+- All changes must come through a pull request.
+- At least one approval is required before merge.
+- Code owner review is required for merge.
+- Approvals are dismissed when new commits are pushed to an open pull request.
 
 ## Release Checklist
 

@@ -15,6 +15,9 @@ Thanks for helping improve Creator Share LAN.
 - Include tests for backend logic when possible.
 - Ensure npm run test and npm run build pass.
 - Document behavior changes in README.md.
+- Open pull requests against main; direct pushes to main are blocked.
+- Pull requests require code owner approval before merge.
+- New commits to a pull request dismiss previous approvals; request a fresh review.
 
 ## Code Style
 
