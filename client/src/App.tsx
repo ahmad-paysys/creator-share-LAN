@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
-import { absoluteUrl, createDownloadPlan, fetchFolderMedia, fetchFolders } from "./api";
+import { absoluteUrl, createDownloadPlan, fetchFolderMedia, fetchFolders, fetchSyncStatus } from "./api";
 import DownloadModal from "./components/DownloadModal";
 import FolderTree from "./components/FolderTree";
 import GalleryGrid from "./components/GalleryGrid";
 import Lightbox from "./components/Lightbox";
-import type { FolderNode, MediaItem } from "./types";
+import type { FolderNode, MediaItem, SyncStatus } from "./types";
 
 type SelectionAction =
   | { type: "toggle"; id: string }
@@ -94,6 +94,10 @@ export default function App() {
   const [copiedViewLink, setCopiedViewLink] = useState(false);
   const copiedLinkTimerRef = useRef<number | null>(null);
   const urlHydratedRef = useRef(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const [syncToast, setSyncToast] = useState<string | null>(null);
+  const lastSeenRevisionRef = useRef<number | null>(null);
+  const syncToastTimerRef = useRef<number | null>(null);
 
   const delay = useCallback((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)), []);
 
@@ -177,6 +181,48 @@ export default function App() {
     const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
     window.history.replaceState(null, "", nextUrl);
   }, [activeFolderId, selectedItems]);
+
+  useEffect(() => {
+    let disposed = false;
+
+    const pollSync = async () => {
+      try {
+        const status = await fetchSyncStatus();
+        if (disposed) {
+          return;
+        }
+
+        const previousRevision = lastSeenRevisionRef.current;
+        lastSeenRevisionRef.current = status.revision;
+        setSyncStatus(status);
+
+        if (previousRevision !== null && status.revision !== previousRevision && status.newMediaCount > 0) {
+          setSyncToast(`${status.newMediaCount} new media found`);
+          if (syncToastTimerRef.current) {
+            window.clearTimeout(syncToastTimerRef.current);
+          }
+          syncToastTimerRef.current = window.setTimeout(() => {
+            setSyncToast(null);
+          }, 3200);
+        }
+      } catch {
+        // Ignore transient LAN polling failures.
+      }
+    };
+
+    pollSync().catch(() => undefined);
+    const interval = window.setInterval(() => {
+      pollSync().catch(() => undefined);
+    }, 5000);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+      if (syncToastTimerRef.current) {
+        window.clearTimeout(syncToastTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -343,6 +389,33 @@ export default function App() {
     selectedItems,
   ]);
 
+  const syncLabel = useMemo(() => {
+    if (!syncStatus) {
+      return "Sync status: connecting";
+    }
+
+    if (syncStatus.state === "scanning") {
+      return "Sync: scanning media";
+    }
+    if (syncStatus.pendingThumbnails > 0) {
+      return `Sync: building ${syncStatus.pendingThumbnails} thumbnails`;
+    }
+    if (syncStatus.state === "updated" && syncStatus.newMediaCount > 0) {
+      return `Sync: ${syncStatus.newMediaCount} new items found`;
+    }
+    return "Sync: up to date";
+  }, [syncStatus]);
+
+  const syncBadgeTone = useMemo(() => {
+    if (!syncStatus || syncStatus.state === "scanning") {
+      return "border-coral/70 bg-coral/20 text-white";
+    }
+    if (syncStatus.pendingThumbnails > 0) {
+      return "border-sand/70 bg-sand/20 text-white";
+    }
+    return "border-mint/70 bg-mint/20 text-white";
+  }, [syncStatus]);
+
   return (
     <div className="min-h-screen animate-rise px-4 py-6 md:px-8">
       <div className="mx-auto max-w-[1600px] space-y-6">
@@ -352,6 +425,12 @@ export default function App() {
             Wedding photo and video delivery on your local network.
           </p>
           <p className="mt-1 text-xs text-white/70">Active folder: {activeFolderPath || "All Media"}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className={`rounded-full border px-3 py-1 text-xs ${syncBadgeTone}`}>{syncLabel}</span>
+            {syncStatus && (
+              <span className="text-xs text-white/70">Revision {syncStatus.revision} • Media {syncStatus.mediaCount}</span>
+            )}
+          </div>
         </header>
 
         <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
@@ -466,6 +545,12 @@ export default function App() {
           }
         }}
       />
+
+      {syncToast && (
+        <div className="fixed bottom-4 right-4 z-50 rounded-xl border border-mint/60 bg-ink px-4 py-2 text-sm text-white shadow-lg shadow-black/40">
+          {syncToast}
+        </div>
+      )}
     </div>
   );
 }

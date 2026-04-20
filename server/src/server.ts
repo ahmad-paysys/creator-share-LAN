@@ -28,16 +28,64 @@ app.use(express.json({ limit: "1mb" }));
 
 const limiter = createTokenBucketRateLimiter(100, 100);
 let queuedRevision = -1;
+let knownMediaIds = new Set<string>();
+
+const syncStatus = {
+  state: "idle" as "idle" | "scanning" | "updated",
+  revision: 0,
+  mediaCount: 0,
+  newMediaCount: 0,
+  lastScanAt: Date.now(),
+  queued: 0,
+  active: 0,
+  pendingThumbnails: 0,
+  indexDirty: false,
+};
 
 async function refreshIndexAndQueue(): Promise<void> {
-  await mediaIndex.ensureFresh();
+  syncStatus.indexDirty = mediaIndex.isDirty();
+  const changed = await mediaIndex.ensureFresh();
+  syncStatus.indexDirty = mediaIndex.isDirty();
   const revision = mediaIndex.getRevision();
-  if (revision === queuedRevision) {
+
+  if (!changed && revision === queuedRevision) {
+    const queueStats = thumbnailService.getQueueStats();
+    syncStatus.queued = queueStats.queued;
+    syncStatus.active = queueStats.active;
+    syncStatus.pendingThumbnails = queueStats.queued + queueStats.active;
     return;
   }
 
-  await thumbnailService.syncMediaCatalog(Array.from(mediaIndex.mediaById.values()));
+  syncStatus.state = "scanning";
+  const mediaItems = Array.from(mediaIndex.mediaById.values());
+
+  let newMediaCount = 0;
+  for (const media of mediaItems) {
+    if (!knownMediaIds.has(media.id)) {
+      newMediaCount += 1;
+    }
+  }
+  if (queuedRevision < 0) {
+    newMediaCount = 0;
+  }
+
+  const result = await thumbnailService.syncMediaCatalog(mediaItems);
+  knownMediaIds = new Set(mediaItems.map((media) => media.id));
+
   queuedRevision = revision;
+  const queueStats = thumbnailService.getQueueStats();
+  syncStatus.state = newMediaCount > 0 ? "updated" : "idle";
+  syncStatus.revision = revision;
+  syncStatus.mediaCount = mediaItems.length;
+  syncStatus.newMediaCount = newMediaCount;
+  syncStatus.lastScanAt = mediaIndex.getLastRebuiltAt();
+  syncStatus.queued = queueStats.queued;
+  syncStatus.active = queueStats.active;
+  syncStatus.pendingThumbnails = queueStats.queued + queueStats.active;
+
+  if (result.total === 0) {
+    syncStatus.state = "idle";
+  }
 }
 
 app.get("/health", async (_req, res) => {
@@ -52,6 +100,11 @@ app.get("/health", async (_req, res) => {
 app.get("/api/folders", async (_req, res) => {
   await refreshIndexAndQueue();
   res.json(mediaIndex.folderTree);
+});
+
+app.get("/api/sync-status", async (_req, res) => {
+  await refreshIndexAndQueue();
+  res.json(syncStatus);
 });
 
 app.get("/api/folders/:folderId/media", async (req, res) => {

@@ -1,4 +1,4 @@
-import type { DownloadRequestItem, DownloadResponse, FolderNode, MediaItem } from "./types";
+import type { DownloadRequestItem, DownloadResponse, FolderNode, MediaItem, SyncStatus } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -16,6 +16,10 @@ export function fetchFolders(): Promise<FolderNode> {
 
 export function fetchFolderMedia(folderId: string): Promise<MediaItem[]> {
   return request<MediaItem[]>(`/api/folders/${folderId}/media`);
+}
+
+export function fetchSyncStatus(): Promise<SyncStatus> {
+  return request<SyncStatus>("/api/sync-status");
 }
 
 export function createDownloadPlan(items: DownloadRequestItem[]): Promise<DownloadResponse> {

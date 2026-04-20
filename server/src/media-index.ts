@@ -29,6 +29,7 @@ export class MediaIndex {
   private buildPromise: Promise<void> | null = null;
   private watcherStarted = false;
   private revision = 0;
+  private lastRebuiltAt = Date.now();
 
   public folderTree: FolderNode = {
     id: "root",
@@ -74,6 +75,14 @@ export class MediaIndex {
 
   public getRevision(): number {
     return this.revision;
+  }
+
+  public isDirty(): boolean {
+    return this.dirty;
+  }
+
+  public getLastRebuiltAt(): number {
+    return this.lastRebuiltAt;
   }
 
   public getMediaForFolder(folderId: string): MediaItem[] {
@@ -141,6 +150,7 @@ export class MediaIndex {
     this.mediaById = context.mediaById;
     this.mediaByFolderId = context.mediaByFolderId;
     this.revision += 1;
+    this.lastRebuiltAt = Date.now();
   }
 
   private async walkDirectory(
