@@ -46,6 +46,20 @@ describe("database migrations", () => {
 
     rollbackMigrations(db.connection, 1);
 
+    const reconciliationRunsTable = db.connection
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'reconciliation_runs'")
+      .get() as { name: string } | undefined;
+
+    expect(reconciliationRunsTable).toBeUndefined();
+
+    const shareViewsStillPresent = db.connection
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'share_views'")
+      .get() as { name: string } | undefined;
+
+    expect(shareViewsStillPresent?.name).toBe("share_views");
+
+    rollbackMigrations(db.connection, 1);
+
     const shareViewsTable = db.connection
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'share_views'")
       .get() as { name: string } | undefined;
