@@ -68,6 +68,8 @@ registerTemporaryViewRoutes(app, {
   defaultExpiryHours: config.tempViewDefaultExpiryHours,
 });
 
+const requireLibraryReadAccess = requireReadAccess(settingsStore, "folder_library");
+
 const limiter = createTokenBucketRateLimiter(100, 100);
 let queuedRevision = -1;
 let knownMediaIds = new Set<string>();
@@ -139,7 +141,7 @@ app.get("/health", async (_req, res) => {
   });
 });
 
-app.get("/api/folders", requireReadAccess(settingsStore, "folder_library"), async (_req, res) => {
+app.get("/api/folders", requireLibraryReadAccess, async (_req, res) => {
   await refreshIndexAndQueue();
   res.json(mediaIndex.folderTree);
 });
@@ -149,7 +151,7 @@ app.get("/api/sync-status", requireReadAccess(settingsStore, "sync_status"), asy
   res.json(syncStatus);
 });
 
-app.get("/api/folders/:folderId/media", requireReadAccess(settingsStore, "folder_library"), async (req, res) => {
+app.get("/api/folders/:folderId/media", requireLibraryReadAccess, async (req, res) => {
   await refreshIndexAndQueue();
   const folderId = String(req.params.folderId);
   const folder = mediaIndex.foldersById.get(folderId);
@@ -162,9 +164,9 @@ app.get("/api/folders/:folderId/media", requireReadAccess(settingsStore, "folder
   res.json(media);
 });
 
-app.get("/thumbnails/:thumbFile", async (req, res) => {
+app.get("/thumbnails/:thumbFile", requireLibraryReadAccess, async (req, res) => {
   await refreshIndexAndQueue();
-  const thumbFile = req.params.thumbFile;
+  const thumbFile = String(req.params.thumbFile);
   if (!thumbFile.endsWith(".jpg")) {
     res.status(400).json({ error: "Invalid thumbnail path" });
     return;
@@ -183,7 +185,7 @@ app.get("/thumbnails/:thumbFile", async (req, res) => {
   res.sendFile(output);
 });
 
-app.get("/media/:mediaId/original", async (req, res) => {
+app.get("/media/:mediaId/original", requireLibraryReadAccess, async (req, res) => {
   const mediaId = String(req.params.mediaId);
   const item = mediaIndex.mediaById.get(mediaId);
   if (!item) {
@@ -202,7 +204,7 @@ app.get("/media/:mediaId/original", async (req, res) => {
   res.sendFile(item.absolutePath);
 });
 
-app.get("/media/:mediaId/resized", limiter, async (req, res) => {
+app.get("/media/:mediaId/resized", requireLibraryReadAccess, limiter, async (req, res) => {
   const mediaId = String(req.params.mediaId);
   const item = mediaIndex.mediaById.get(mediaId);
   if (!item) {
@@ -227,7 +229,7 @@ app.get("/media/:mediaId/resized", limiter, async (req, res) => {
   res.sendFile(file);
 });
 
-app.post("/api/download", limiter, async (req, res) => {
+app.post("/api/download", requireLibraryReadAccess, limiter, async (req, res) => {
   const body = req.body as {
     items?: Array<{ id: string; resizeMb: number | null }>;
   };
@@ -263,6 +265,7 @@ app.post("/api/download", limiter, async (req, res) => {
 
 app.use(
   "/thumbnails",
+  requireLibraryReadAccess,
   express.static(config.thumbsDir, {
     maxAge: "1d",
     setHeaders: (response) => {
