@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import mime from "mime-types";
+import { requireReadAccess } from "./access-middleware";
 import { AuthService } from "./auth-service";
 import { authContextMiddleware } from "./auth-middleware";
 import { registerAuthRoutes } from "./auth-routes";
@@ -14,6 +15,8 @@ import { AppDatabase } from "./database";
 import { MediaIndex } from "./media-index";
 import { createTokenBucketRateLimiter } from "./rate-limit";
 import { ResizeService } from "./resize";
+import { registerSettingsRoutes } from "./settings-routes";
+import { SettingsStore } from "./settings-store";
 import { ThumbnailService } from "./thumbnail-service";
 
 const config = loadConfig();
@@ -22,6 +25,7 @@ const app = express();
 const appDb = new AppDatabase(config.databasePath);
 const authStore = new AuthStore(appDb.connection);
 const authService = new AuthService(authStore, config.authSessionTtlHours);
+const settingsStore = new SettingsStore(appDb.connection);
 
 const mediaIndex = new MediaIndex(config);
 const thumbnailService = new ThumbnailService(config);
@@ -42,6 +46,7 @@ registerAuthRoutes(app, {
   authService,
   cookieName: config.authCookieName,
 });
+registerSettingsRoutes(app, settingsStore);
 
 const limiter = createTokenBucketRateLimiter(100, 100);
 let queuedRevision = -1;
@@ -114,19 +119,19 @@ app.get("/health", async (_req, res) => {
   });
 });
 
-app.get("/api/folders", async (_req, res) => {
+app.get("/api/folders", requireReadAccess(settingsStore, "folder_library"), async (_req, res) => {
   await refreshIndexAndQueue();
   res.json(mediaIndex.folderTree);
 });
 
-app.get("/api/sync-status", async (_req, res) => {
+app.get("/api/sync-status", requireReadAccess(settingsStore, "sync_status"), async (_req, res) => {
   await refreshIndexAndQueue();
   res.json(syncStatus);
 });
 
-app.get("/api/folders/:folderId/media", async (req, res) => {
+app.get("/api/folders/:folderId/media", requireReadAccess(settingsStore, "folder_library"), async (req, res) => {
   await refreshIndexAndQueue();
-  const folderId = req.params.folderId;
+  const folderId = String(req.params.folderId);
   const folder = mediaIndex.foldersById.get(folderId);
   if (!folder) {
     res.status(404).json({ error: "Folder not found" });
@@ -260,6 +265,7 @@ if (fs.existsSync(clientDist)) {
 
 async function bootstrap() {
   appDb.init();
+  settingsStore.ensureDefaults();
   await authService.bootstrapOwnerIfNeeded({
     username: config.bootstrapOwnerUsername,
     password: config.bootstrapOwnerPassword,
