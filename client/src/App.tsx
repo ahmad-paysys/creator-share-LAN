@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { absoluteUrl, createDownloadPlan, fetchFolderMedia, fetchFolders } from "./api";
@@ -29,6 +29,53 @@ function selectionReducer(state: Set<string>, action: SelectionAction): Set<stri
   return next;
 }
 
+interface SharedViewState {
+  folderId: string;
+  selectedIds: string[];
+}
+
+function parseSharedViewState(): SharedViewState {
+  const params = new URLSearchParams(window.location.search);
+  const folderId = params.get("folder") || "root";
+  const selectedIds = (params.get("sel") || "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  return { folderId, selectedIds };
+}
+
+function findFolderPathById(root: FolderNode, folderId: string): string {
+  if (folderId === "root") {
+    return "";
+  }
+
+  const stack: FolderNode[] = [root];
+  while (stack.length > 0) {
+    const node = stack.pop()!;
+    if (node.id === folderId) {
+      return node.path;
+    }
+    stack.push(...node.children);
+  }
+  return "";
+}
+
+function hasFolderId(root: FolderNode, folderId: string): boolean {
+  if (folderId === "root") {
+    return true;
+  }
+
+  const stack: FolderNode[] = [root];
+  while (stack.length > 0) {
+    const node = stack.pop()!;
+    if (node.id === folderId) {
+      return true;
+    }
+    stack.push(...node.children);
+  }
+  return false;
+}
+
 export default function App() {
   const [folderTree, setFolderTree] = useState<FolderNode | null>(null);
   const [activeFolderId, setActiveFolderId] = useState("root");
@@ -44,6 +91,9 @@ export default function App() {
   const [downloadMode, setDownloadMode] = useState<"zip" | "separate">("zip");
   const [progress, setProgress] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [copiedViewLink, setCopiedViewLink] = useState(false);
+  const copiedLinkTimerRef = useRef<number | null>(null);
+  const urlHydratedRef = useRef(false);
 
   const delay = useCallback((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)), []);
 
@@ -80,15 +130,61 @@ export default function App() {
     setItems(media);
     setActiveFolderId(folderId);
     setActiveFolderPath(folderPath);
+    return media;
   }, []);
 
   useEffect(() => {
     (async () => {
       const tree = await fetchFolders();
       setFolderTree(tree);
-      await loadFolder("root", "");
+      const shared = parseSharedViewState();
+      const targetFolderId = hasFolderId(tree, shared.folderId) ? shared.folderId : "root";
+      const folderPath = findFolderPathById(tree, targetFolderId);
+      const media = await loadFolder(targetFolderId, folderPath);
+
+      if (shared.selectedIds.length > 0) {
+        const selectedSet = new Set(shared.selectedIds);
+        const valid = media.filter((item) => selectedSet.has(item.id)).map((item) => item.id);
+        if (valid.length > 0) {
+          dispatchSelection({ type: "set-many", ids: valid });
+        }
+      }
+
+      urlHydratedRef.current = true;
     })().catch(console.error);
   }, [loadFolder]);
+
+  useEffect(() => {
+    if (!urlHydratedRef.current) {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (activeFolderId === "root") {
+      params.delete("folder");
+    } else {
+      params.set("folder", activeFolderId);
+    }
+
+    const selectedIdsForUrl = selectedItems.map((item) => item.id).slice(0, 400);
+    if (selectedIdsForUrl.length > 0) {
+      params.set("sel", selectedIdsForUrl.join(","));
+    } else {
+      params.delete("sel");
+    }
+
+    const query = params.toString();
+    const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+    window.history.replaceState(null, "", nextUrl);
+  }, [activeFolderId, selectedItems]);
+
+  useEffect(() => {
+    return () => {
+      if (copiedLinkTimerRef.current) {
+        window.clearTimeout(copiedLinkTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -143,6 +239,35 @@ export default function App() {
 
   const handleClearSelection = useCallback(() => {
     dispatchSelection({ type: "clear" });
+  }, []);
+
+  const handleCopyViewLink = useCallback(async () => {
+    const link = window.location.href;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(link);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = link;
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+
+      setCopiedViewLink(true);
+      if (copiedLinkTimerRef.current) {
+        window.clearTimeout(copiedLinkTimerRef.current);
+      }
+      copiedLinkTimerRef.current = window.setTimeout(() => {
+        setCopiedViewLink(false);
+      }, 2200);
+    } catch {
+      window.alert("Could not copy link. Please copy the URL from your browser address bar.");
+    }
   }, []);
 
   const runBatchDownload = useCallback(async () => {
@@ -264,6 +389,15 @@ export default function App() {
                       disabled={!hasAnySelected}
                     >
                       Deselect All
+                    </button>
+
+                    <button
+                      className="rounded-full bg-white/20 px-3 py-1 hover:bg-white/30"
+                      onClick={() => {
+                        handleCopyViewLink().catch(() => undefined);
+                      }}
+                    >
+                      {copiedViewLink ? "Link Copied" : "Copy View Link"}
                     </button>
 
                     {hasAnySelected && (
