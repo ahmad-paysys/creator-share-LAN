@@ -10,6 +10,10 @@ LAN-focused photo and video sharing app for wedding media delivery.
 - CI pipeline: .github/workflows/ci.yml
 - Branch governance: main accepts changes through pull requests only and requires code owner approval.
 
+## Planning Docs
+
+- RBAC and gallery rollout acceptance criteria: docs/RBAC_EXECUTION_ACCEPTANCE.md
+
 ## Stack
 
 - Frontend: React + TypeScript + Vite + Tailwind
