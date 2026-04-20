@@ -30,7 +30,6 @@ body {
   background: linear-gradient(165deg, rgba(8, 19, 25, 0.82), rgba(15, 76, 92, 0.78));
   color: var(--text);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(6px);
 }
 
 .hero-title {
@@ -52,3 +51,4 @@ body {
     line-height: 1.15;
   }
 }
+

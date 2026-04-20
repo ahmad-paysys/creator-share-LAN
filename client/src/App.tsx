@@ -151,7 +151,7 @@ export default function App() {
   return (
     <div className="min-h-screen animate-rise px-4 py-6 md:px-8">
       <div className="mx-auto max-w-[1600px] space-y-6">
-        <header className="glass rounded-3xl p-6 shadow-glow">
+        <header className="glass rounded-3xl p-6 shadow-lg shadow-black/20">
           <h1 className="hero-title">Creator Share LAN</h1>
           <p className="mt-2 text-sm text-white/80">
             Wedding photo and video delivery on your local network.
@@ -160,7 +160,7 @@ export default function App() {
         </header>
 
         <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
-          <aside className="glass rounded-3xl p-4 shadow-glow">
+          <aside className="glass rounded-3xl p-4 shadow-lg shadow-black/20">
             <FolderTree
               root={folderTree}
               activeFolderId={activeFolderId}
@@ -171,8 +171,8 @@ export default function App() {
           </aside>
 
           <main className="space-y-4">
-            <section className="glass rounded-3xl p-4 shadow-glow">
-              <div className="sticky top-2 z-20 mb-3 rounded-2xl bg-ink/70 p-3 backdrop-blur">
+            <section className="glass rounded-3xl p-4 shadow-lg shadow-black/20">
+              <div className="sticky top-2 z-20 mb-3 rounded-2xl border border-white/15 bg-ink/85 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold text-white">Gallery</h2>
                   <div className="flex flex-wrap items-center gap-2 text-sm text-white/85">

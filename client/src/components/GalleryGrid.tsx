@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { FixedSizeGrid as Grid } from "react-window";
 import type { GridChildComponentProps } from "react-window";
 import { absoluteUrl } from "../api";
@@ -10,6 +10,10 @@ interface GalleryGridProps {
   onToggleSelect: (id: string, index: number, withRange: boolean) => void;
   onOpenLightbox: (index: number) => void;
 }
+
+const VIRTUALIZE_THRESHOLD = 100;
+const CARD_WIDTH = 224;
+const CARD_HEIGHT = 278;
 
 const GridItem = memo(function GridItem({
   item,
@@ -25,13 +29,16 @@ const GridItem = memo(function GridItem({
   onOpenLightbox: (index: number) => void;
 }) {
   return (
-    <article className="group relative overflow-hidden rounded-2xl bg-ink/80 shadow-glow">
+    <article className="gallery-card group relative overflow-hidden rounded-2xl bg-ink/80 shadow-sm">
       <button className="block w-full" onClick={() => onOpenLightbox(index)}>
         <img
           src={absoluteUrl(item.thumbnailUrl)}
           alt={item.name}
+          width={280}
+          height={192}
           className="h-48 w-full object-cover"
           loading="lazy"
+          decoding="async"
         />
         {item.type === "video" && (
           <span className="absolute left-3 top-3 rounded-full bg-black/50 px-2 py-1 text-xs text-white">
@@ -39,7 +46,13 @@ const GridItem = memo(function GridItem({
           </span>
         )}
       </button>
-      <label className="absolute right-3 top-3 flex cursor-pointer items-center gap-2 rounded-full bg-black/55 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100">
+      <label
+        className={`absolute right-3 top-3 z-10 flex cursor-pointer items-center gap-2 rounded-full bg-black/60 px-2 py-1 text-xs text-white ${
+          selected
+            ? "opacity-100"
+            : "opacity-95"
+        }`}
+      >
         <input
           type="checkbox"
           checked={selected}
@@ -59,39 +72,70 @@ export default function GalleryGrid({
   onToggleSelect,
   onOpenLightbox,
 }: GalleryGridProps) {
-  if (items.length > 500) {
-    const columnCount = 4;
-    const rowCount = Math.ceil(items.length / columnCount);
-    return (
-      <Grid
-        className="rounded-2xl"
-        columnCount={columnCount}
-        columnWidth={250}
-        height={700}
-        rowCount={rowCount}
-        rowHeight={280}
-        width={1020}
-      >
-        {({ columnIndex, rowIndex, style }: GridChildComponentProps) => {
-          const index = rowIndex * columnCount + columnIndex;
-          const item = items[index];
-          if (!item) {
-            return null;
-          }
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [containerWidth, setContainerWidth] = useState(1024);
 
-          return (
-            <div style={style} className="p-2">
-              <GridItem
-                item={item}
-                index={index}
-                selected={selected.has(item.id)}
-                onToggleSelect={onToggleSelect}
-                onOpenLightbox={onOpenLightbox}
-              />
-            </div>
-          );
-        }}
-      </Grid>
+  useEffect(() => {
+    if (!containerRef.current) {
+      return;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (width) {
+        setContainerWidth(width);
+      }
+    });
+
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const virtualConfig = useMemo(() => {
+    const columnCount = Math.max(1, Math.floor(containerWidth / CARD_WIDTH));
+    const rowCount = Math.ceil(items.length / columnCount);
+    return {
+      columnCount,
+      rowCount,
+      gridWidth: Math.max(CARD_WIDTH, containerWidth),
+      gridHeight: Math.min(window.innerHeight ? Math.floor(window.innerHeight * 0.74) : 760, 920),
+    };
+  }, [containerWidth, items.length]);
+
+  if (items.length > VIRTUALIZE_THRESHOLD) {
+    return (
+      <div ref={containerRef} className="w-full">
+        <Grid
+          className="rounded-2xl"
+          columnCount={virtualConfig.columnCount}
+          columnWidth={CARD_WIDTH}
+          height={virtualConfig.gridHeight}
+          overscanRowCount={2}
+          rowCount={virtualConfig.rowCount}
+          rowHeight={CARD_HEIGHT}
+          width={virtualConfig.gridWidth}
+        >
+          {({ columnIndex, rowIndex, style }: GridChildComponentProps) => {
+            const index = rowIndex * virtualConfig.columnCount + columnIndex;
+            const item = items[index];
+            if (!item) {
+              return null;
+            }
+
+            return (
+              <div style={style} className="p-2">
+                <GridItem
+                  item={item}
+                  index={index}
+                  selected={selected.has(item.id)}
+                  onToggleSelect={onToggleSelect}
+                  onOpenLightbox={onOpenLightbox}
+                />
+              </div>
+            );
+          }}
+        </Grid>
+      </div>
     );
   }
 
