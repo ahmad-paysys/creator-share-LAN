@@ -1,8 +1,9 @@
 import Database from "better-sqlite3";
-import type { VisibilitySettings } from "./access-types";
+import type { UiThemeProfile, VisibilitySettings } from "./access-types";
 
 const KEY_FOLDER_VIEW_PUBLIC = "folder_view_public";
 const KEY_LIBRARY_VIEW_PUBLIC = "library_view_public";
+const KEY_UI_THEME_DEFAULT = "ui_theme_default";
 
 function toStoredBoolean(value: boolean): string {
   return JSON.stringify(value);
@@ -21,6 +22,26 @@ function parseStoredBoolean(raw: string | null | undefined, fallback: boolean): 
   }
 }
 
+function toStoredString(value: string): string {
+  return JSON.stringify(value);
+}
+
+function parseStoredTheme(raw: string | null | undefined, fallback: UiThemeProfile): UiThemeProfile {
+  if (!raw) {
+    return fallback;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed === "dark" || parsed === "light" || parsed === "solar") {
+      return parsed;
+    }
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export class SettingsStore {
   private db: Database.Database;
 
@@ -31,6 +52,7 @@ export class SettingsStore {
   public ensureDefaults(): void {
     this.ensureBooleanSetting(KEY_FOLDER_VIEW_PUBLIC, true);
     this.ensureBooleanSetting(KEY_LIBRARY_VIEW_PUBLIC, true);
+    this.ensureStringSetting(KEY_UI_THEME_DEFAULT, "solar");
   }
 
   public getVisibilitySettings(): VisibilitySettings {
@@ -61,6 +83,22 @@ export class SettingsStore {
     return this.getVisibilitySettings();
   }
 
+  public getUiThemeDefault(): UiThemeProfile {
+    const row = this.db
+      .prepare("SELECT value_json FROM settings WHERE key = ?")
+      .get(KEY_UI_THEME_DEFAULT) as { value_json: string } | undefined;
+
+    return parseStoredTheme(row?.value_json, "solar");
+  }
+
+  public updateUiThemeDefault(theme: UiThemeProfile): UiThemeProfile {
+    this.db
+      .prepare("UPDATE settings SET value_json = ?, updated_at = ? WHERE key = ?")
+      .run(toStoredString(theme), new Date().toISOString(), KEY_UI_THEME_DEFAULT);
+
+    return this.getUiThemeDefault();
+  }
+
   private ensureBooleanSetting(key: string, value: boolean): void {
     this.db
       .prepare(
@@ -69,6 +107,16 @@ export class SettingsStore {
          ON CONFLICT(key) DO NOTHING`,
       )
       .run(key, toStoredBoolean(value), new Date().toISOString());
+  }
+
+  private ensureStringSetting(key: string, value: string): void {
+    this.db
+      .prepare(
+        `INSERT INTO settings(key, value_json, updated_at)
+         VALUES (?, ?, ?)
+         ON CONFLICT(key) DO NOTHING`,
+      )
+      .run(key, toStoredString(value), new Date().toISOString());
   }
 
   private getBooleanSetting(key: string, fallback: boolean): boolean {

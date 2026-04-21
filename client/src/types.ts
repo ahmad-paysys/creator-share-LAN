@@ -46,6 +46,7 @@ export interface SyncStatus {
 }
 
 export type UserRole = "owner" | "admin" | "editor" | "viewer";
+export type ThemeProfile = "dark" | "light" | "solar";
 
 export interface SafeUser {
   id: string;
@@ -57,6 +58,7 @@ export interface SafeUser {
 export interface VisibilitySettings {
   folderViewPublic: boolean;
   libraryViewPublic: boolean;
+  uiThemeDefault: ThemeProfile;
 }
 
 export interface GalleryListItem {

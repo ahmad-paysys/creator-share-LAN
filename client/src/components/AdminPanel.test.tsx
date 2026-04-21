@@ -9,11 +9,11 @@ vi.mock("../api", () => ({
       { id: "u2", username: "viewer", displayName: "Viewer", role: "viewer" },
     ],
   })),
-  fetchAdminSettings: vi.fn(async () => ({ folderViewPublic: true, libraryViewPublic: true })),
+  fetchAdminSettings: vi.fn(async () => ({ folderViewPublic: true, libraryViewPublic: true, uiThemeDefault: "solar" })),
   listGalleries: vi.fn(async () => ({ galleries: [{ slug: "wedding", title: "Wedding", visibility: "private", updatedAt: "", itemCount: 1, description: null }] })),
   createAdminUser: vi.fn(async () => ({ user: { id: "u3", username: "newuser", displayName: null, role: "viewer" } })),
   updateAdminUserRole: vi.fn(async () => ({ user: { id: "u2", username: "viewer", displayName: "Viewer", role: "editor" } })),
-  updateAdminSettings: vi.fn(async () => ({ folderViewPublic: false, libraryViewPublic: true })),
+  updateAdminSettings: vi.fn(async () => ({ folderViewPublic: false, libraryViewPublic: true, uiThemeDefault: "solar" })),
   createGallery: vi.fn(async () => ({ gallery: {} })),
   updateGalleryAccess: vi.fn(async () => ({ gallery: {} })),
   getGallery: vi.fn(async () => ({ gallery: { access: { roleShares: ["viewer"], userShares: ["viewer"] } } })),
@@ -23,18 +23,23 @@ vi.mock("../api", () => ({
 
 import { createAdminUser, createTemporaryView, updateAdminSettings } from "../api";
 
+const defaultProps = {
+  currentUser: { id: "u1", username: "owner", displayName: "Owner", role: "owner" as const },
+  selectedMediaIds: ["m1", "m2"],
+  globalThemeDefault: "solar" as const,
+  activeTheme: "solar" as const,
+  hasBrowserOverride: false,
+  onClearThemeOverride: vi.fn(),
+  onGlobalThemeUpdated: vi.fn(),
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe("AdminPanel", () => {
   it("allows admin to provision users", async () => {
-    render(
-      <AdminPanel
-        currentUser={{ id: "u1", username: "owner", displayName: "Owner", role: "owner" }}
-        selectedMediaIds={["m1", "m2"]}
-      />,
-    );
+    render(<AdminPanel {...defaultProps} />);
 
     await waitFor(() => {
       expect(screen.getByText("Provision Users")).toBeInTheDocument();
@@ -53,13 +58,9 @@ describe("AdminPanel", () => {
   });
 
   it("supports visibility toggles and temporary view creation", async () => {
-    render(
-      <AdminPanel
-        currentUser={{ id: "u1", username: "owner", displayName: "Owner", role: "owner" }}
-        selectedMediaIds={["m1"]}
-      />,
-    );
+    render(<AdminPanel {...defaultProps} selectedMediaIds={["m1"]} />);
 
+    fireEvent.click(screen.getByRole("button", { name: "Visibility" }));
     await waitFor(() => {
       expect(screen.getByText("Library Visibility")).toBeInTheDocument();
     });
@@ -68,6 +69,8 @@ describe("AdminPanel", () => {
     await waitFor(() => {
       expect(updateAdminSettings).toHaveBeenCalled();
     });
+
+    fireEvent.click(screen.getByRole("button", { name: "Temporary Links" }));
 
     fireEvent.change(screen.getByPlaceholderText("temporary slug"), { target: { value: "temp-1" } });
     fireEvent.change(screen.getByPlaceholderText("temporary title"), { target: { value: "Temporary" } });
@@ -83,6 +86,11 @@ describe("AdminPanel", () => {
       <AdminPanel
         currentUser={{ id: "u2", username: "viewer", displayName: "Viewer", role: "viewer" }}
         selectedMediaIds={[]}
+        globalThemeDefault="solar"
+        activeTheme="solar"
+        hasBrowserOverride={false}
+        onClearThemeOverride={vi.fn()}
+        onGlobalThemeUpdated={vi.fn()}
       />,
     );
 

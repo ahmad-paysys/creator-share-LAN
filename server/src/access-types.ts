@@ -3,6 +3,8 @@ export interface VisibilitySettings {
   libraryViewPublic: boolean;
 }
 
+export type UiThemeProfile = "dark" | "light" | "solar";
+
 export type AccessResource = "folder_library" | "sync_status";
 
 export type AccessAction = "read";

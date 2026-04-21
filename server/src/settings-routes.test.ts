@@ -51,6 +51,12 @@ afterEach(() => {
 });
 
 describe("settings routes", () => {
+  it("exposes public app settings including default theme", async () => {
+    const response = await request(app).get("/api/settings");
+    expect(response.status).toBe(200);
+    expect(response.body.uiThemeDefault).toBe("solar");
+  });
+
   it("requires privileged role", async () => {
     const response = await request(app).get("/api/admin/settings");
     expect(response.status).toBe(403);
@@ -74,16 +80,25 @@ describe("settings routes", () => {
     const before = await request(app).get("/api/admin/settings").set("Cookie", sessionCookie);
     expect(before.status).toBe(200);
     expect(before.body.libraryViewPublic).toBe(true);
+    expect(before.body.uiThemeDefault).toBe("solar");
 
     const updated = await request(app)
       .patch("/api/admin/settings")
       .set("Cookie", sessionCookie)
-      .send({ libraryViewPublic: false, folderViewPublic: false });
+      .send({ libraryViewPublic: false, folderViewPublic: false, uiThemeDefault: "dark" });
 
     expect(updated.status).toBe(200);
     expect(updated.body).toEqual({
       libraryViewPublic: false,
       folderViewPublic: false,
+      uiThemeDefault: "dark",
     });
+
+    const invalid = await request(app)
+      .patch("/api/admin/settings")
+      .set("Cookie", sessionCookie)
+      .send({ uiThemeDefault: "neon" });
+
+    expect(invalid.status).toBe(400);
   });
 });

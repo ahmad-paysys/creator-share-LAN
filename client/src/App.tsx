@@ -7,6 +7,7 @@ import {
   fetchCurrentUser,
   fetchFolderMedia,
   fetchFolders,
+  fetchPublicSettings,
   fetchSyncStatus,
   login,
   logout,
@@ -16,7 +17,9 @@ import DownloadModal from "./components/DownloadModal";
 import FolderTree from "./components/FolderTree";
 import GalleryGrid from "./components/GalleryGrid";
 import Lightbox from "./components/Lightbox";
-import type { FolderNode, MediaItem, SafeUser, SyncStatus } from "./types";
+import type { FolderNode, MediaItem, SafeUser, SyncStatus, ThemeProfile } from "./types";
+
+const THEME_OVERRIDE_STORAGE_KEY = "creator-share-theme-override";
 
 type SelectionAction =
   | { type: "toggle"; id: string }
@@ -117,6 +120,8 @@ export default function App() {
   const [syncToast, setSyncToast] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<SafeUser | null>(null);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [globalThemeDefault, setGlobalThemeDefault] = useState<ThemeProfile>("solar");
+  const [themeOverride, setThemeOverride] = useState<ThemeProfile | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
@@ -183,6 +188,15 @@ export default function App() {
   }, [loadFolder]);
 
   useEffect(() => {
+    const stored = window.localStorage.getItem(THEME_OVERRIDE_STORAGE_KEY);
+    if (stored === "dark" || stored === "light" || stored === "solar") {
+      setThemeOverride(stored);
+    }
+
+    fetchPublicSettings()
+      .then((settings) => setGlobalThemeDefault(settings.uiThemeDefault))
+      .catch(() => setGlobalThemeDefault("solar"));
+
     fetchCurrentUser()
       .then((user) => {
         setCurrentUser(user);
@@ -190,6 +204,25 @@ export default function App() {
       .catch(() => {
         setCurrentUser(null);
       });
+  }, []);
+
+  const activeTheme = useMemo<ThemeProfile>(() => themeOverride ?? globalThemeDefault, [globalThemeDefault, themeOverride]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", activeTheme);
+  }, [activeTheme]);
+
+  const handleThemeSelection = useCallback((value: string) => {
+    if (value === "default") {
+      window.localStorage.removeItem(THEME_OVERRIDE_STORAGE_KEY);
+      setThemeOverride(null);
+      return;
+    }
+
+    if (value === "dark" || value === "light" || value === "solar") {
+      window.localStorage.setItem(THEME_OVERRIDE_STORAGE_KEY, value);
+      setThemeOverride(value);
+    }
   }, []);
 
   useEffect(() => {
@@ -487,25 +520,25 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen animate-rise px-4 py-6 md:px-8">
+    <div className="ui-page min-h-screen animate-rise px-4 py-6 md:px-8">
       <div className="mx-auto max-w-[1600px] space-y-6">
         <header className="glass rounded-3xl p-6 shadow-lg shadow-black/20">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h1 className="hero-title">Creator Share LAN</h1>
-              <p className="mt-2 text-sm text-white/80">
+              <p className="theme-muted mt-2 text-sm">
                 Wedding photo and video delivery on your local network.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 text-xs text-white/80">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
               {currentUser ? (
                 <>
-                  <span className="rounded-full border border-white/25 px-3 py-1">
+                  <span className="ui-chip rounded-full px-3 py-1">
                     {currentUser.username} ({currentUser.role})
                   </span>
                   <button
-                    className="rounded-full bg-white/20 px-3 py-1 hover:bg-white/30 disabled:opacity-40"
+                    className="ui-btn rounded-full px-3 py-1 disabled:opacity-40"
                     disabled={authBusy}
                     onClick={() => {
                       runLogout().catch(() => undefined);
@@ -515,11 +548,23 @@ export default function App() {
                   </button>
                 </>
               ) : (
-                <span className="rounded-full border border-white/25 px-3 py-1">Anonymous mode</span>
+                <span className="ui-chip rounded-full px-3 py-1">Anonymous mode</span>
               )}
 
+              <select
+                className="ui-input rounded-full px-3 py-1"
+                aria-label="Theme profile"
+                value={themeOverride ?? "default"}
+                onChange={(event) => handleThemeSelection(event.target.value)}
+              >
+                <option value="default">Global ({globalThemeDefault})</option>
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+                <option value="solar">Solar</option>
+              </select>
+
               <button
-                className="rounded-full bg-mint/25 px-3 py-1 hover:bg-mint/40 disabled:opacity-40"
+                className="ui-btn rounded-full px-3 py-1 disabled:opacity-40"
                 disabled={!canOpenAdmin}
                 onClick={() => setShowAdminPanel((prev) => !prev)}
               >
@@ -527,31 +572,31 @@ export default function App() {
               </button>
             </div>
           </div>
-          <p className="mt-1 text-xs text-white/70">Active folder: {activeFolderPath || "All Media"}</p>
+          <p className="theme-muted mt-1 text-xs">Active folder: {activeFolderPath || "All Media"}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className={`rounded-full border px-3 py-1 text-xs ${syncBadgeTone}`}>{syncLabel}</span>
             {syncStatus && (
-              <span className="text-xs text-white/70">Revision {syncStatus.revision} • Media {syncStatus.mediaCount}</span>
+              <span className="theme-muted text-xs">Revision {syncStatus.revision} • Media {syncStatus.mediaCount}</span>
             )}
           </div>
 
           {!currentUser && (
             <div className="mt-4 grid gap-2 rounded-2xl border border-white/15 bg-black/25 p-3 md:grid-cols-[1fr,1fr,auto]">
               <input
-                className="rounded-lg bg-black/30 px-2 py-1 text-sm"
+                className="ui-input rounded-lg px-2 py-1 text-sm"
                 placeholder="Admin username"
                 value={loginForm.username}
                 onChange={(event) => setLoginForm((prev) => ({ ...prev, username: event.target.value }))}
               />
               <input
-                className="rounded-lg bg-black/30 px-2 py-1 text-sm"
+                className="ui-input rounded-lg px-2 py-1 text-sm"
                 type="password"
                 placeholder="Password"
                 value={loginForm.password}
                 onChange={(event) => setLoginForm((prev) => ({ ...prev, password: event.target.value }))}
               />
               <button
-                className="rounded-lg bg-white/20 px-3 py-1 text-sm hover:bg-white/30 disabled:opacity-40"
+                className="ui-btn rounded-lg px-3 py-1 text-sm disabled:opacity-40"
                 disabled={authBusy}
                 onClick={() => {
                   runLogin().catch(() => undefined);
@@ -559,7 +604,7 @@ export default function App() {
               >
                 Admin Login
               </button>
-              {authError && <p className="md:col-span-3 text-xs text-coral">{authError}</p>}
+              {authError && <p className="md:col-span-3 text-xs ui-error">{authError}</p>}
             </div>
           )}
 
@@ -571,7 +616,19 @@ export default function App() {
         </header>
 
         {showAdminPanel && currentUser && canOpenAdmin && (
-          <AdminPanel currentUser={currentUser} selectedMediaIds={selectedItems.map((item) => item.id)} />
+          <AdminPanel
+            currentUser={currentUser}
+            selectedMediaIds={selectedItems.map((item) => item.id)}
+            globalThemeDefault={globalThemeDefault}
+            activeTheme={activeTheme}
+            hasBrowserOverride={themeOverride !== null}
+            onClearThemeOverride={() => {
+              handleThemeSelection("default");
+            }}
+            onGlobalThemeUpdated={(next) => {
+              setGlobalThemeDefault(next);
+            }}
+          />
         )}
 
         <div className="grid gap-6 lg:grid-cols-[320px,1fr]">

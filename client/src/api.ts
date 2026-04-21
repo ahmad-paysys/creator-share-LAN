@@ -7,6 +7,7 @@ import type {
   MediaItem,
   SafeUser,
   SyncStatus,
+  ThemeProfile,
   TemporaryViewDetail,
   UserRole,
   VisibilitySettings,
@@ -69,6 +70,10 @@ export function fetchFolderMedia(folderId: string): Promise<MediaItem[]> {
 
 export function fetchSyncStatus(): Promise<SyncStatus> {
   return request<SyncStatus>("/api/sync-status");
+}
+
+export function fetchPublicSettings(): Promise<{ uiThemeDefault: ThemeProfile }> {
+  return request<{ uiThemeDefault: ThemeProfile }>("/api/settings");
 }
 
 export function createDownloadPlan(items: DownloadRequestItem[]): Promise<DownloadResponse> {
