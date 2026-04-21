@@ -11,8 +11,8 @@ import { registerAuthRoutes } from "./auth/routes";
 import { AuthStore } from "./auth/store";
 import { csrfProtectionMiddleware } from "./csrf-middleware";
 import { AppDatabase } from "./core/database";
-import { registerSettingsRoutes } from "./settings-routes";
-import { SettingsStore } from "./settings-store";
+import { registerSettingsRoutes } from "./settings/routes";
+import { SettingsStore } from "./settings/store";
 
 const COOKIE_NAME = "creator_session";
 const CSRF_COOKIE_NAME = "creator_csrf";

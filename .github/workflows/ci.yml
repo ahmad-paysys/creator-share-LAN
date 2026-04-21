@@ -24,11 +24,11 @@ jobs:
       - name: Run RBAC matrix tests
         run: >
           npm run test --workspace server --
-          src/access-policy.test.ts
-          src/access-middleware.test.ts
-          src/existing-routes-authz.test.ts
-          src/gallery-routes.test.ts
-          src/settings-routes.test.ts
+          src/access/policy.test.ts
+          src/access/middleware.test.ts
+          src/access/existing-routes-authz.test.ts
+          src/gallery/routes.test.ts
+          src/settings/routes.test.ts
 
   integration-regression:
     runs-on: ubuntu-latest
@@ -48,11 +48,11 @@ jobs:
       - name: Run integration and security suites
         run: >
           npm run test --workspace server --
-          src/auth-routes.test.ts
+          src/auth/routes.test.ts
           src/csrf-middleware.test.ts
-          src/temporary-view-routes.test.ts
-          src/reconciliation-routes.test.ts
-          src/ops-routes.test.ts
+          src/temporary-views/routes.test.ts
+          src/reconciliation/routes.test.ts
+          src/ops/routes.test.ts
 
       - name: Run client contract and UI tests
         run: npm run test --workspace client

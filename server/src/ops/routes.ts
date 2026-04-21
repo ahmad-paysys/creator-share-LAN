@@ -1,9 +1,9 @@
 import type { Express } from "express";
 import { AuditStore } from "./audit-store";
-import { AuthStore } from "./auth/store";
-import { ReconciliationStore } from "./reconciliation-store";
-import { requireAdmin } from "./shared/auth-guards";
-import { TemporaryViewStore } from "./temporary-views/store";
+import { AuthStore } from "../auth/store";
+import { ReconciliationStore } from "../reconciliation/store";
+import { requireAdmin } from "../shared/auth-guards";
+import { TemporaryViewStore } from "../temporary-views/store";
 
 interface OpsRouteDeps {
   auditStore: AuditStore;

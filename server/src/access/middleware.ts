@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { evaluateAccess } from "./policy";
 import type { AccessResource } from "./types";
 import { isLanIp } from "./lan";
-import { SettingsStore } from "../settings-store";
+import { SettingsStore } from "../settings/store";
 
 export function requireReadAccess(
   settingsStore: SettingsStore,

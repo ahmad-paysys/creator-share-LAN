@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { AuditStore } from "../audit-store";
+import { AuditStore } from "../ops/audit-store";
 import { AuthService } from "./service";
 import { createCsrfToken } from "../csrf-middleware";
 import { requirePrivilegedUser } from "../shared/auth-guards";

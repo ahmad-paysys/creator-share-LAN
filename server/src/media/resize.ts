@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
-import type { AppConfig, MediaItem } from "./types/app";
+import type { AppConfig, MediaItem } from "../types/app";
 import { ThumbnailService } from "./thumbnail-service";
 
 const ONE_HOUR_MS = 60 * 60 * 1000;

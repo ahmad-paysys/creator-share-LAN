@@ -11,7 +11,7 @@ import { authContextMiddleware } from "../auth/middleware";
 import { registerAuthRoutes } from "../auth/routes";
 import { AuthStore } from "../auth/store";
 import { AppDatabase } from "../core/database";
-import { SettingsStore } from "../settings-store";
+import { SettingsStore } from "../settings/store";
 
 const COOKIE_NAME = "creator_session";
 

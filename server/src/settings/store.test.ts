@@ -2,8 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { AppDatabase } from "./core/database";
-import { SettingsStore } from "./settings-store";
+import { AppDatabase } from "../core/database";
+import { SettingsStore } from "./store";
 
 const tempDirs: string[] = [];
 

@@ -1,2 +1,4 @@
-// Phase 1 scaffold placeholder for media module exports.
-export {};
+export * from "./indexer";
+export * from "./thumbnail-manifest";
+export * from "./thumbnail-service";
+export * from "./resize";

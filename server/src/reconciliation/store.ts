@@ -5,7 +5,7 @@ import type {
   ReconciliationRecentRun,
   ReconciliationRunSummary,
   ReconciliationUnresolvedRecord,
-} from "./reconciliation-types";
+} from "./types";
 
 export class ReconciliationStore {
   private db: Database.Database;

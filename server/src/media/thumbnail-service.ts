@@ -3,7 +3,7 @@ import fsp from "node:fs/promises";
 import path from "node:path";
 import ffmpeg from "fluent-ffmpeg";
 import sharp from "sharp";
-import type { AppConfig, MediaItem } from "./types/app";
+import type { AppConfig, MediaItem } from "../types/app";
 import { ThumbnailManifest } from "./thumbnail-manifest";
 
 interface QueueEntry {
