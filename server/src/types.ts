@@ -45,6 +45,10 @@ export interface AppConfig {
   databasePath: string;
   authSessionTtlHours: number;
   authCookieName: string;
+  csrfCookieName: string;
+  loginThrottleWindowSeconds: number;
+  loginThrottleMaxAttempts: number;
+  loginThrottleBlockSeconds: number;
   bootstrapOwnerUsername: string;
   bootstrapOwnerPassword: string;
   bootstrapOwnerDisplayName: string;

@@ -10,6 +10,10 @@ import {
 describe("api contract", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    Object.defineProperty(document, "cookie", {
+      value: "creator_csrf=test-csrf-token",
+      configurable: true,
+    });
   });
 
   it("sends correct contract for admin settings updates", async () => {
@@ -23,8 +27,12 @@ describe("api contract", () => {
       "/api/admin/settings",
       expect.objectContaining({
         method: "PATCH",
+        headers: expect.any(Headers),
       }),
     );
+
+    const headers = (fetchMock.mock.calls[0]?.[1] as RequestInit).headers as Headers;
+    expect(headers.get("x-csrf-token")).toBe("test-csrf-token");
   });
 
   it("sends user provisioning and role assignment requests", async () => {
@@ -39,11 +47,11 @@ describe("api contract", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/admin/users",
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({ method: "POST", headers: expect.any(Headers) }),
     );
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/admin/users/1",
-      expect.objectContaining({ method: "PATCH" }),
+      expect.objectContaining({ method: "PATCH", headers: expect.any(Headers) }),
     );
   });
 
@@ -63,11 +71,11 @@ describe("api contract", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/gallery/private-a/access",
-      expect.objectContaining({ method: "PATCH" }),
+      expect.objectContaining({ method: "PATCH", headers: expect.any(Headers) }),
     );
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/views",
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({ method: "POST", headers: expect.any(Headers) }),
     );
   });
 });
