@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createAdminUser,
   createTemporaryView,
+  fetchPublicSettings,
   updateAdminSettings,
   updateGalleryAccess,
   updateAdminUserRole,
@@ -18,7 +19,7 @@ describe("api contract", () => {
 
   it("sends correct contract for admin settings updates", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ folderViewPublic: true, libraryViewPublic: false }), { status: 200 }),
+      new Response(JSON.stringify({ folderViewPublic: true, libraryViewPublic: false, uiThemeDefault: "solar" }), { status: 200 }),
     );
 
     await updateAdminSettings({ folderViewPublic: true, libraryViewPublic: false });
@@ -33,6 +34,17 @@ describe("api contract", () => {
 
     const headers = (fetchMock.mock.calls[0]?.[1] as RequestInit).headers as Headers;
     expect(headers.get("x-csrf-token")).toBe("test-csrf-token");
+  });
+
+  it("fetches public theme settings", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ uiThemeDefault: "solar" }), { status: 200 }),
+    );
+
+    const result = await fetchPublicSettings();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/settings", expect.anything());
+    expect(result.uiThemeDefault).toBe("solar");
   });
 
   it("sends user provisioning and role assignment requests", async () => {
