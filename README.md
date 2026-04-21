@@ -14,6 +14,22 @@ LAN-focused photo and video sharing app for wedding media delivery.
 
 - RBAC and gallery rollout acceptance criteria: docs/RBAC_EXECUTION_ACCEPTANCE.md
 
+## Manifest Pending Items
+
+Pending items below are tracked against the SWE manifest in prompt.md and represent requirements not yet implemented in the current codebase.
+
+- Config hot-reload for .env in dev mode is not implemented (config is loaded at startup only).
+- INCLUDE_FOLDERS and EXCLUDE_FOLDERS support only simple name lists today; manifest-level glob or regex matching is still pending.
+- Media ordering is currently based on filesystem mtime; EXIF-first image ordering from the manifest is pending.
+- Lazy loading fallback with IntersectionObserver is pending (native loading="lazy" is implemented).
+- Desktop lightbox edge-click navigation is pending (arrow controls and keyboard navigation are implemented).
+- Legacy batch flow endpoint parity is pending for the manifest's GET /api/download?ids flow; current implementation uses POST /api/download with item payload.
+- Resized-file cache retention policy from the manifest is only partially implemented; explicit 1-hour TTL plus LRU eviction bound (for example 5GB cap) is pending.
+- Performance benchmark suite from the manifest is pending (gallery render timing, thumbnail generation timing, and regression thresholds).
+- End-to-end test coverage for navigation -> selection -> download is pending.
+- Manifest requirement to keep the app LAN-only without login is intentionally not implemented because this project now uses authenticated RBAC workflows.
+- Themes as separate loadable files from /themes folder, one theme per .dream file.
+
 ## Stack
 
 - Frontend: React + TypeScript + Vite + Tailwind
