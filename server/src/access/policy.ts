@@ -1,5 +1,5 @@
-import type { SafeUser } from "./auth-types";
-import type { AccessAction, AccessDecision, AccessResource, VisibilitySettings } from "./access-types";
+import type { SafeUser } from "../auth/types";
+import type { AccessAction, AccessDecision, AccessResource, VisibilitySettings } from "./types";
 
 function evaluateAuthenticated(user: SafeUser): AccessDecision {
   if (user.role === "owner") {
@@ -51,4 +51,5 @@ export function evaluateAccess(input: {
 
   return { allowed: true, reason: "ALLOW_ANONYMOUS_PUBLIC" };
 }
+
 

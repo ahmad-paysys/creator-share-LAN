@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { AuthService } from "./auth-service";
+import { AuthService } from "./service";
 
 function extractToken(req: Request, cookieName: string): string | null {
   const authHeader = req.header("authorization");
@@ -36,4 +36,5 @@ export function authContextMiddleware(authService: AuthService, cookieName: stri
     next();
   };
 }
+
 

@@ -1,6 +1,7 @@
-import type { Express, Request, Response } from "express";
+import type { Express } from "express";
 import { ReconciliationService } from "./reconciliation-service";
 import { ReconciliationStore } from "./reconciliation-store";
+import { requireAdmin } from "./shared/auth-guards";
 import type { MediaItem } from "./types/app";
 
 interface ReconciliationRouteDeps {
@@ -10,21 +11,6 @@ interface ReconciliationRouteDeps {
   getCurrentMediaSnapshot: () => Map<string, MediaItem>;
   getPreviousMediaSnapshot: () => Map<string, MediaItem>;
   setPreviousMediaSnapshot: (snapshot: Map<string, MediaItem>) => void;
-}
-
-function requireAdmin(req: Request, res: Response) {
-  const user = req.auth?.user;
-  if (!user) {
-    res.status(401).json({ error: "Unauthorized" });
-    return null;
-  }
-
-  if (user.role === "owner" || user.role === "admin") {
-    return user;
-  }
-
-  res.status(403).json({ error: "Forbidden" });
-  return null;
 }
 
 export function registerReconciliationRoutes(app: Express, deps: ReconciliationRouteDeps): void {
@@ -82,4 +68,5 @@ export function registerReconciliationRoutes(app: Express, deps: ReconciliationR
     });
   });
 }
+
 

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
-import type { AuthenticatedSession, SafeUser, SessionRecord, StoredUser, UserRole } from "./auth-types";
-import { toSafeUser } from "./auth-types";
+import type { AuthenticatedSession, SafeUser, SessionRecord, StoredUser, UserRole } from "./types";
+import { toSafeUser } from "./types";
 
 function mapStoredUser(row: {
   id: string;
@@ -260,4 +260,5 @@ export class AuthStore {
     return Number(row.count);
   }
 }
+
 

@@ -1,8 +1,8 @@
 import express from "express";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
-import { requireReadAccess } from "./access-middleware";
-import { SettingsStore } from "./settings-store";
+import { requireReadAccess } from "./middleware";
+import { SettingsStore } from "../settings-store";
 
 function makeApp(options: {
   settings: { folderViewPublic: boolean; libraryViewPublic: boolean };
@@ -59,4 +59,5 @@ describe("requireReadAccess middleware", () => {
     expect(response.headers["x-authz-reason"]).toBe("ALLOW_VIEWER");
   });
 });
+
 

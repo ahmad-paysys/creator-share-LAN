@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
-import type { SafeUser } from "./auth-types";
+import type { SafeUser } from "./auth/types";
 import type {
   TemporaryViewItemRecord,
   TemporaryViewRecord,
@@ -247,4 +247,5 @@ export class TemporaryViewStore {
     return Number(row.count);
   }
 }
+
 

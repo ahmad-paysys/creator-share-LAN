@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
-import { AuthStore } from "./auth-store";
+import { AuthStore } from "./auth/store";
 import { GalleryStore } from "./gallery-store";
-import { isLanIp } from "./lan-access";
+import { isLanIp } from "./access/lan";
 import { TemporaryViewStore } from "./temporary-view-store";
 import { canManageTemporaryView } from "./temporary-view-types";
 import type { TemporaryViewVisibility } from "./temporary-view-types";
@@ -355,4 +355,5 @@ export function registerTemporaryViewRoutes(app: Express, deps: TemporaryViewRou
     res.json({ ok: true });
   });
 }
+
 

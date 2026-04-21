@@ -5,12 +5,12 @@ import cookieParser from "cookie-parser";
 import express from "express";
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { AuthService } from "./auth-service";
-import { authContextMiddleware } from "./auth-middleware";
-import { registerAuthRoutes } from "./auth-routes";
-import { AuthStore } from "./auth-store";
-import { AppDatabase } from "./core/database";
-import { LoginThrottle } from "./login-throttle";
+import { AuthService } from "./service";
+import { authContextMiddleware } from "./middleware";
+import { registerAuthRoutes } from "./routes";
+import { AuthStore } from "./store";
+import { AppDatabase } from "../core/database";
+import { LoginThrottle } from "./throttle";
 
 const COOKIE_NAME = "creator_session";
 
@@ -204,4 +204,5 @@ describe("auth routes", () => {
     expect(throttled.headers["retry-after"]).toBeDefined();
   });
 });
+
 

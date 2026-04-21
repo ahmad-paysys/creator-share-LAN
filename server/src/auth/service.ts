@@ -1,8 +1,8 @@
 import { createHash, randomBytes, scrypt as nodeScrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
-import { AuthStore } from "./auth-store";
-import type { AuthenticatedSession, SafeUser, UserRole } from "./auth-types";
-import { toSafeUser } from "./auth-types";
+import { AuthStore } from "./store";
+import type { AuthenticatedSession, SafeUser, UserRole } from "./types";
+import { toSafeUser } from "./types";
 
 const scrypt = promisify(nodeScrypt);
 const HASH_PREFIX = "scrypt";
@@ -191,4 +191,5 @@ export class AuthService {
     this.store.deleteSessionByTokenHash(hashToken(token));
   }
 }
+
 

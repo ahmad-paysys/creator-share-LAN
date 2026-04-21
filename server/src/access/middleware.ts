@@ -1,8 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
-import { evaluateAccess } from "./access-policy";
-import type { AccessResource } from "./access-types";
-import { isLanIp } from "./lan-access";
-import { SettingsStore } from "./settings-store";
+import { evaluateAccess } from "./policy";
+import type { AccessResource } from "./types";
+import { isLanIp } from "./lan";
+import { SettingsStore } from "../settings-store";
 
 export function requireReadAccess(
   settingsStore: SettingsStore,
@@ -58,4 +58,5 @@ export function requireReadAccess(
     next();
   };
 }
+
 

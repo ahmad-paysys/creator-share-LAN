@@ -1,7 +1,8 @@
-import type { Express, Request, Response } from "express";
+import type { Express } from "express";
 import { AuditStore } from "./audit-store";
-import { AuthStore } from "./auth-store";
+import { AuthStore } from "./auth/store";
 import { ReconciliationStore } from "./reconciliation-store";
+import { requireAdmin } from "./shared/auth-guards";
 import { TemporaryViewStore } from "./temporary-view-store";
 
 interface OpsRouteDeps {
@@ -11,16 +12,6 @@ interface OpsRouteDeps {
   reconciliationStore: ReconciliationStore;
   defaultRetentionDays: number;
   runRetention: (days: number) => { deletedAuditEvents: number; deletedResolvedBacklogRows: number };
-}
-
-function requireAdmin(req: Request, res: Response) {
-  const role = req.auth?.user?.role;
-  if (role === "owner" || role === "admin") {
-    return true;
-  }
-
-  res.status(403).json({ error: "Forbidden" });
-  return false;
 }
 
 export function registerOpsRoutes(app: Express, deps: OpsRouteDeps): void {
@@ -89,4 +80,5 @@ export function registerOpsRoutes(app: Express, deps: OpsRouteDeps): void {
     });
   });
 }
+
 
