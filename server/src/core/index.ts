@@ -1,2 +1,3 @@
-// Phase 1 scaffold placeholder for core module exports.
-export {};
+export * from "./config";
+export * from "./database";
+export * from "./db-migrations";
