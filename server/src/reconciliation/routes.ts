@@ -1,8 +1,8 @@
 import type { Express } from "express";
-import { ReconciliationService } from "./reconciliation-service";
-import { ReconciliationStore } from "./reconciliation-store";
-import { requireAdmin } from "./shared/auth-guards";
-import type { MediaItem } from "./types/app";
+import { ReconciliationService } from "./service";
+import { ReconciliationStore } from "./store";
+import { requireAdmin } from "../shared/auth-guards";
+import type { MediaItem } from "../types/app";
 
 interface ReconciliationRouteDeps {
   reconciliationStore: ReconciliationStore;

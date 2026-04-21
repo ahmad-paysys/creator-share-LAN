@@ -1,8 +1,8 @@
 import type { Express } from "express";
-import type { UiThemeProfile } from "./access/types";
-import { AuditStore } from "./audit-store";
-import { requirePrivilegedUser } from "./shared/auth-guards";
-import { SettingsStore } from "./settings-store";
+import type { UiThemeProfile } from "../access/types";
+import { AuditStore } from "../ops/audit-store";
+import { requirePrivilegedUser } from "../shared/auth-guards";
+import { SettingsStore } from "./store";
 
 export function registerSettingsRoutes(
   app: Express,

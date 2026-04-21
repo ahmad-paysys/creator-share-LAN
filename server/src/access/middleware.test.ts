@@ -2,7 +2,7 @@ import express from "express";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { requireReadAccess } from "./middleware";
-import { SettingsStore } from "../settings-store";
+import { SettingsStore } from "../settings/store";
 
 function makeApp(options: {
   settings: { folderViewPublic: boolean; libraryViewPublic: boolean };
