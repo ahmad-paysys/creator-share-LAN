@@ -14,8 +14,34 @@ import type {
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const entries = document.cookie.split(";").map((entry) => entry.trim());
+  const match = entries.find((entry) => entry.startsWith(`${name}=`));
+  if (!match) {
+    return null;
+  }
+
+  return decodeURIComponent(match.slice(name.length + 1));
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, init);
+  const method = (init?.method ?? "GET").toUpperCase();
+  const headers = new Headers(init?.headers ?? {});
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    const csrfToken = readCookie("creator_csrf");
+    if (csrfToken) {
+      headers.set("x-csrf-token", csrfToken);
+    }
+  }
+
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers,
+  });
   if (!response.ok) {
     throw new Error(`Request failed: ${response.status}`);
   }

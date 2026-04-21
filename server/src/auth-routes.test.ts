@@ -10,6 +10,7 @@ import { authContextMiddleware } from "./auth-middleware";
 import { registerAuthRoutes } from "./auth-routes";
 import { AuthStore } from "./auth-store";
 import { AppDatabase } from "./database";
+import { LoginThrottle } from "./login-throttle";
 
 const COOKIE_NAME = "creator_session";
 
@@ -17,6 +18,7 @@ let appDb: AppDatabase;
 let authService: AuthService;
 let app: express.Express;
 let tempDir: string;
+let loginThrottle: LoginThrottle;
 
 beforeEach(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "creator-share-auth-"));
@@ -26,6 +28,11 @@ beforeEach(async () => {
 
   const authStore = new AuthStore(appDb.connection);
   authService = new AuthService(authStore, 4);
+  loginThrottle = new LoginThrottle({
+    windowSeconds: 60,
+    blockSeconds: 120,
+    maxAttempts: 3,
+  });
   await authService.bootstrapOwnerIfNeeded({
     username: "owner",
     password: "VeryStrongPassword1",
@@ -36,7 +43,12 @@ beforeEach(async () => {
   app.use(express.json({ limit: "1mb" }));
   app.use(cookieParser());
   app.use(authContextMiddleware(authService, COOKIE_NAME));
-  registerAuthRoutes(app, { authService, cookieName: COOKIE_NAME });
+  registerAuthRoutes(app, {
+    authService,
+    cookieName: COOKIE_NAME,
+    csrfCookieName: "creator_csrf",
+    loginThrottle,
+  });
 });
 
 afterEach(() => {
@@ -167,5 +179,28 @@ describe("auth routes", () => {
 
     expect(adminCanPromoteViewer.status).toBe(200);
     expect(adminCanPromoteViewer.body.user.role).toBe("editor");
+  });
+
+  it("throttles repeated failed login attempts", async () => {
+    await request(app).post("/api/auth/login").send({
+      username: "owner",
+      password: "WrongPassword1",
+    });
+    await request(app).post("/api/auth/login").send({
+      username: "owner",
+      password: "WrongPassword2",
+    });
+    await request(app).post("/api/auth/login").send({
+      username: "owner",
+      password: "WrongPassword3",
+    });
+
+    const throttled = await request(app).post("/api/auth/login").send({
+      username: "owner",
+      password: "VeryStrongPassword1",
+    });
+
+    expect(throttled.status).toBe(429);
+    expect(throttled.headers["retry-after"]).toBeDefined();
   });
 });

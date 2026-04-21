@@ -1,6 +1,8 @@
 import type { Express, Request, Response } from "express";
 import { AuditStore } from "./audit-store";
 import { AuthService } from "./auth-service";
+import { createCsrfToken } from "./csrf-middleware";
+import { LoginThrottle } from "./login-throttle";
 
 function sanitizeDisplayName(value: unknown): string | null {
   if (typeof value !== "string") {
@@ -24,6 +26,8 @@ function requirePrivilegedUser(req: Request, res: Response): boolean {
 export function registerAuthRoutes(app: Express, deps: {
   authService: AuthService;
   cookieName: string;
+  csrfCookieName?: string;
+  loginThrottle?: LoginThrottle;
   auditStore?: AuditStore;
 }): void {
   app.post("/api/auth/login", async (req, res) => {
@@ -34,6 +38,24 @@ export function registerAuthRoutes(app: Express, deps: {
       return;
     }
 
+    const throttleKey = `${req.ip ?? "unknown"}:${username.toLowerCase()}`;
+    if (deps.loginThrottle) {
+      const gate = deps.loginThrottle.check(throttleKey);
+      if (!gate.allowed) {
+        res.setHeader("Retry-After", String(gate.retryAfterSeconds));
+        deps.auditStore?.insertEvent({
+          actorType: "anonymous",
+          action: "auth.login_throttled",
+          targetType: "user",
+          targetId: username || null,
+          result: "error",
+          requestIp: req.ip ?? null,
+        });
+        res.status(429).json({ error: "Too many login attempts. Try again later." });
+        return;
+      }
+    }
+
     const result = await deps.authService.login({
       username,
       password,
@@ -42,6 +64,7 @@ export function registerAuthRoutes(app: Express, deps: {
     });
 
     if (!result) {
+      deps.loginThrottle?.recordFailure(throttleKey);
       deps.auditStore?.insertEvent({
         actorType: "anonymous",
         action: "auth.login",
@@ -54,8 +77,19 @@ export function registerAuthRoutes(app: Express, deps: {
       return;
     }
 
+    deps.loginThrottle?.recordSuccess(throttleKey);
+
     res.cookie(deps.cookieName, result.sessionToken, {
       httpOnly: true,
+      sameSite: "lax",
+      maxAge: result.expiresInMs,
+      secure: false,
+    });
+
+    const csrfCookieName = deps.csrfCookieName ?? "creator_csrf";
+    const csrfToken = createCsrfToken();
+    res.cookie(csrfCookieName, csrfToken, {
+      httpOnly: false,
       sameSite: "lax",
       maxAge: result.expiresInMs,
       secure: false,
@@ -64,6 +98,7 @@ export function registerAuthRoutes(app: Express, deps: {
     res.json({
       user: result.user,
       expiresAt: result.expiresAt,
+      csrfToken,
     });
 
     deps.auditStore?.insertEvent({
@@ -95,6 +130,7 @@ export function registerAuthRoutes(app: Express, deps: {
     });
 
     res.clearCookie(deps.cookieName);
+    res.clearCookie(deps.csrfCookieName ?? "creator_csrf");
     res.json({ ok: true });
   });
 

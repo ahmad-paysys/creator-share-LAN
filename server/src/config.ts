@@ -19,6 +19,10 @@ const DEFAULTS = {
   DATABASE_PATH: "./server/data/app.db",
   AUTH_SESSION_TTL_HOURS: 12,
   AUTH_COOKIE_NAME: "creator_session",
+  CSRF_COOKIE_NAME: "creator_csrf",
+  LOGIN_THROTTLE_WINDOW_SECONDS: 300,
+  LOGIN_THROTTLE_MAX_ATTEMPTS: 5,
+  LOGIN_THROTTLE_BLOCK_SECONDS: 900,
   TEMP_VIEW_DEFAULT_EXPIRY_HOURS: 24,
   AUDIT_RETENTION_DAYS: 90,
   BOOTSTRAP_OWNER_USERNAME: "",
@@ -140,6 +144,16 @@ export function loadConfig(): AppConfig {
     databasePath,
     authSessionTtlHours: Number(process.env.AUTH_SESSION_TTL_HOURS ?? DEFAULTS.AUTH_SESSION_TTL_HOURS),
     authCookieName: process.env.AUTH_COOKIE_NAME ?? DEFAULTS.AUTH_COOKIE_NAME,
+    csrfCookieName: process.env.CSRF_COOKIE_NAME ?? DEFAULTS.CSRF_COOKIE_NAME,
+    loginThrottleWindowSeconds: Number(
+      process.env.LOGIN_THROTTLE_WINDOW_SECONDS ?? DEFAULTS.LOGIN_THROTTLE_WINDOW_SECONDS,
+    ),
+    loginThrottleMaxAttempts: Number(
+      process.env.LOGIN_THROTTLE_MAX_ATTEMPTS ?? DEFAULTS.LOGIN_THROTTLE_MAX_ATTEMPTS,
+    ),
+    loginThrottleBlockSeconds: Number(
+      process.env.LOGIN_THROTTLE_BLOCK_SECONDS ?? DEFAULTS.LOGIN_THROTTLE_BLOCK_SECONDS,
+    ),
     tempViewDefaultExpiryHours: Number(
       process.env.TEMP_VIEW_DEFAULT_EXPIRY_HOURS ?? DEFAULTS.TEMP_VIEW_DEFAULT_EXPIRY_HOURS,
     ),

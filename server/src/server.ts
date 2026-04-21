@@ -15,6 +15,8 @@ import { loadConfig } from "./config";
 import { AppDatabase } from "./database";
 import { GalleryStore } from "./gallery-store";
 import { registerGalleryRoutes } from "./gallery-routes";
+import { csrfProtectionMiddleware } from "./csrf-middleware";
+import { LoginThrottle } from "./login-throttle";
 import { MediaIndex } from "./media-index";
 import { registerOpsRoutes } from "./ops-routes";
 import { registerReconciliationRoutes } from "./reconciliation-routes";
@@ -41,6 +43,11 @@ const temporaryViewStore = new TemporaryViewStore(appDb.connection);
 const auditStore = new AuditStore(appDb.connection);
 const reconciliationStore = new ReconciliationStore(appDb.connection);
 const reconciliationService = new ReconciliationService(reconciliationStore);
+const loginThrottle = new LoginThrottle({
+  windowSeconds: config.loginThrottleWindowSeconds,
+  blockSeconds: config.loginThrottleBlockSeconds,
+  maxAttempts: config.loginThrottleMaxAttempts,
+});
 
 const mediaIndex = new MediaIndex(config);
 const thumbnailService = new ThumbnailService(config);
@@ -56,10 +63,13 @@ app.use(compression());
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 app.use(authContextMiddleware(authService, config.authCookieName));
+app.use(csrfProtectionMiddleware(config.csrfCookieName));
 
 registerAuthRoutes(app, {
   authService,
   cookieName: config.authCookieName,
+  csrfCookieName: config.csrfCookieName,
+  loginThrottle,
   auditStore,
 });
 registerSettingsRoutes(app, settingsStore, auditStore);
