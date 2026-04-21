@@ -5,16 +5,16 @@ import cookieParser from "cookie-parser";
 import express from "express";
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { AuthService } from "./auth/service";
-import { authContextMiddleware } from "./auth/middleware";
-import { registerAuthRoutes } from "./auth/routes";
-import { AuthStore } from "./auth/store";
-import { AppDatabase } from "./core/database";
-import { GalleryStore } from "./gallery-store";
-import { registerGalleryRoutes } from "./gallery-routes";
-import { registerTemporaryViewRoutes } from "./temporary-view-routes";
-import { TemporaryViewStore } from "./temporary-view-store";
-import type { MediaItem } from "./types/app";
+import { AuthService } from "../auth/service";
+import { authContextMiddleware } from "../auth/middleware";
+import { registerAuthRoutes } from "../auth/routes";
+import { AuthStore } from "../auth/store";
+import { AppDatabase } from "../core/database";
+import { GalleryStore } from "../gallery/store";
+import { registerGalleryRoutes } from "../gallery/routes";
+import { registerTemporaryViewRoutes } from "./routes";
+import { TemporaryViewStore } from "./store";
+import type { MediaItem } from "../types/app";
 
 const COOKIE_NAME = "creator_session";
 

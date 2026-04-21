@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
-import type { SafeUser, UserRole } from "./auth/types";
+import type { SafeUser, UserRole } from "../auth/types";
 import type {
   GalleryAccessSnapshot,
   GalleryItemRecord,
   GalleryListItem,
   GalleryRecord,
   GalleryVisibility,
-} from "./gallery-types";
+} from "./types";
 
 function mapGallery(row: {
   id: string;

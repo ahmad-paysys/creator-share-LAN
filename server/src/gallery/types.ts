@@ -1,4 +1,4 @@
-import type { SafeUser, UserRole } from "./auth/types";
+import type { SafeUser, UserRole } from "../auth/types";
 
 export type GalleryVisibility = "public" | "private";
 
