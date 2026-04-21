@@ -20,6 +20,7 @@ const DEFAULTS = {
   AUTH_SESSION_TTL_HOURS: 12,
   AUTH_COOKIE_NAME: "creator_session",
   TEMP_VIEW_DEFAULT_EXPIRY_HOURS: 24,
+  AUDIT_RETENTION_DAYS: 90,
   BOOTSTRAP_OWNER_USERNAME: "",
   BOOTSTRAP_OWNER_PASSWORD: "",
   BOOTSTRAP_OWNER_DISPLAY_NAME: "Owner",
@@ -142,6 +143,7 @@ export function loadConfig(): AppConfig {
     tempViewDefaultExpiryHours: Number(
       process.env.TEMP_VIEW_DEFAULT_EXPIRY_HOURS ?? DEFAULTS.TEMP_VIEW_DEFAULT_EXPIRY_HOURS,
     ),
+    auditRetentionDays: Number(process.env.AUDIT_RETENTION_DAYS ?? DEFAULTS.AUDIT_RETENTION_DAYS),
     bootstrapOwnerUsername: process.env.BOOTSTRAP_OWNER_USERNAME ?? DEFAULTS.BOOTSTRAP_OWNER_USERNAME,
     bootstrapOwnerPassword: process.env.BOOTSTRAP_OWNER_PASSWORD ?? DEFAULTS.BOOTSTRAP_OWNER_PASSWORD,
     bootstrapOwnerDisplayName:

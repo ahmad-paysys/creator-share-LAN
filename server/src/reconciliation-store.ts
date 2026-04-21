@@ -272,6 +272,22 @@ export class ReconciliationStore {
     }));
   }
 
+  public countActiveUnresolved(): number {
+    const row = this.db
+      .prepare("SELECT COUNT(*) as count FROM reconciliation_unresolved WHERE resolved_at IS NULL")
+      .get() as { count: number };
+
+    return Number(row.count);
+  }
+
+  public deleteResolvedOlderThan(cutoffIso: string): number {
+    const result = this.db
+      .prepare("DELETE FROM reconciliation_unresolved WHERE resolved_at IS NOT NULL AND resolved_at < ?")
+      .run(cutoffIso);
+
+    return result.changes;
+  }
+
   public insertAuditEvent(input: {
     action: string;
     targetType: string;

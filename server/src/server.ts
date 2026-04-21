@@ -6,6 +6,7 @@ import cors from "cors";
 import express from "express";
 import mime from "mime-types";
 import { requireReadAccess } from "./access-middleware";
+import { AuditStore } from "./audit-store";
 import { AuthService } from "./auth-service";
 import { authContextMiddleware } from "./auth-middleware";
 import { registerAuthRoutes } from "./auth-routes";
@@ -15,6 +16,7 @@ import { AppDatabase } from "./database";
 import { GalleryStore } from "./gallery-store";
 import { registerGalleryRoutes } from "./gallery-routes";
 import { MediaIndex } from "./media-index";
+import { registerOpsRoutes } from "./ops-routes";
 import { registerReconciliationRoutes } from "./reconciliation-routes";
 import { ReconciliationService } from "./reconciliation-service";
 import { ReconciliationStore } from "./reconciliation-store";
@@ -36,6 +38,7 @@ const authService = new AuthService(authStore, config.authSessionTtlHours);
 const settingsStore = new SettingsStore(appDb.connection);
 const galleryStore = new GalleryStore(appDb.connection);
 const temporaryViewStore = new TemporaryViewStore(appDb.connection);
+const auditStore = new AuditStore(appDb.connection);
 const reconciliationStore = new ReconciliationStore(appDb.connection);
 const reconciliationService = new ReconciliationService(reconciliationStore);
 
@@ -57,8 +60,9 @@ app.use(authContextMiddleware(authService, config.authCookieName));
 registerAuthRoutes(app, {
   authService,
   cookieName: config.authCookieName,
+  auditStore,
 });
-registerSettingsRoutes(app, settingsStore);
+registerSettingsRoutes(app, settingsStore, auditStore);
 registerGalleryRoutes(app, {
   galleryStore,
   authStore,
@@ -86,7 +90,45 @@ registerReconciliationRoutes(app, {
   },
 });
 
-const requireLibraryReadAccess = requireReadAccess(settingsStore, "folder_library");
+function runRetentionPolicy(days: number) {
+  const boundedDays = Math.max(1, Math.min(3650, Math.floor(days)));
+  const cutoffIso = new Date(Date.now() - boundedDays * 24 * 60 * 60 * 1000).toISOString();
+
+  return {
+    deletedAuditEvents: auditStore.deleteOlderThan(cutoffIso),
+    deletedResolvedBacklogRows: reconciliationStore.deleteResolvedOlderThan(cutoffIso),
+  };
+}
+
+registerOpsRoutes(app, {
+  auditStore,
+  authStore,
+  temporaryViewStore,
+  reconciliationStore,
+  defaultRetentionDays: config.auditRetentionDays,
+  runRetention: runRetentionPolicy,
+});
+
+const requireLibraryReadAccess = requireReadAccess(settingsStore, "folder_library", {
+  onDecision: (payload) => {
+    if (payload.allowed) {
+      return;
+    }
+
+    auditStore.insertEvent({
+      actorType: payload.userId ? "user" : "anonymous",
+      actorUserId: payload.userId,
+      action: "authz.denied",
+      targetType: payload.resource,
+      targetId: payload.path,
+      result: "error",
+      requestIp: payload.ip,
+      meta: {
+        reason: payload.reason,
+      },
+    });
+  },
+});
 
 const limiter = createTokenBucketRateLimiter(100, 100);
 let queuedRevision = -1;
@@ -330,6 +372,11 @@ async function bootstrap() {
   await mediaIndex.init();
   previousMediaSnapshot = new Map(mediaIndex.mediaById.entries());
   await refreshIndexAndQueue();
+  runRetentionPolicy(config.auditRetentionDays);
+
+  setInterval(() => {
+    runRetentionPolicy(config.auditRetentionDays);
+  }, 24 * 60 * 60 * 1000);
 
   app.listen(config.port, "0.0.0.0", () => {
     console.log(`Creator Share LAN running on port ${config.port}`);
