@@ -43,3 +43,4 @@ export function toSafeUser(user: StoredUser): SafeUser {
     role: user.role,
   };
 }
+

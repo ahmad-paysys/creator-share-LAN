@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { AuthStore } from "./auth-store";
-import { AppDatabase } from "./database";
+import { AppDatabase } from "./core/database";
 
 const createdDirs: string[] = [];
 
@@ -77,3 +77,4 @@ describe("AuthStore", () => {
     appDb.close();
   });
 });
+

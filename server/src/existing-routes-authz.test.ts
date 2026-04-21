@@ -10,7 +10,7 @@ import { AuthService } from "./auth-service";
 import { authContextMiddleware } from "./auth-middleware";
 import { registerAuthRoutes } from "./auth-routes";
 import { AuthStore } from "./auth-store";
-import { AppDatabase } from "./database";
+import { AppDatabase } from "./core/database";
 import { SettingsStore } from "./settings-store";
 
 const COOKIE_NAME = "creator_session";
@@ -154,3 +154,4 @@ describe("existing media and download route protections", () => {
     expect(downloadRead.headers["x-authz-reason"]).toBe("ALLOW_VIEWER");
   });
 });
+

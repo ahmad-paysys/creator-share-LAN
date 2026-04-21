@@ -9,7 +9,7 @@ import { AuthService } from "./auth-service";
 import { authContextMiddleware } from "./auth-middleware";
 import { registerAuthRoutes } from "./auth-routes";
 import { AuthStore } from "./auth-store";
-import { AppDatabase } from "./database";
+import { AppDatabase } from "./core/database";
 import { registerSettingsRoutes } from "./settings-routes";
 import { SettingsStore } from "./settings-store";
 
@@ -102,3 +102,4 @@ describe("settings routes", () => {
     expect(invalid.status).toBe(400);
   });
 });
+

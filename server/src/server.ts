@@ -11,8 +11,8 @@ import { AuthService } from "./auth-service";
 import { authContextMiddleware } from "./auth-middleware";
 import { registerAuthRoutes } from "./auth-routes";
 import { AuthStore } from "./auth-store";
-import { loadConfig } from "./config";
-import { AppDatabase } from "./database";
+import { loadConfig } from "./core/config";
+import { AppDatabase } from "./core/database";
 import { GalleryStore } from "./gallery-store";
 import { registerGalleryRoutes } from "./gallery-routes";
 import { csrfProtectionMiddleware } from "./csrf-middleware";
@@ -29,7 +29,7 @@ import { SettingsStore } from "./settings-store";
 import { registerTemporaryViewRoutes } from "./temporary-view-routes";
 import { TemporaryViewStore } from "./temporary-view-store";
 import { ThumbnailService } from "./thumbnail-service";
-import type { MediaItem } from "./types";
+import type { MediaItem } from "./types/app";
 
 const config = loadConfig();
 const app = express();
@@ -402,3 +402,4 @@ bootstrap().catch((error) => {
 });
 
 export { app };
+

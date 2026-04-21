@@ -78,3 +78,4 @@ export function csrfProtectionMiddleware(csrfCookieName: string) {
     next();
   };
 }
+

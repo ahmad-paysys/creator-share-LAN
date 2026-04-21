@@ -34,3 +34,4 @@ export function canManageTemporaryView(user: SafeUser, view: TemporaryViewRecord
 
   return user.role === "editor" && view.createdBy === user.id;
 }
+

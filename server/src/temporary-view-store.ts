@@ -247,3 +247,4 @@ export class TemporaryViewStore {
     return Number(row.count);
   }
 }
+

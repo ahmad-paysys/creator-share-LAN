@@ -14,3 +14,4 @@ describe("estimateResizeDimensions", () => {
     expect(result.height).toBeGreaterThanOrEqual(240);
   });
 });
+

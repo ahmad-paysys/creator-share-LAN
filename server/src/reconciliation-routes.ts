@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { ReconciliationService } from "./reconciliation-service";
 import { ReconciliationStore } from "./reconciliation-store";
-import type { MediaItem } from "./types";
+import type { MediaItem } from "./types/app";
 
 interface ReconciliationRouteDeps {
   reconciliationStore: ReconciliationStore;
@@ -82,3 +82,4 @@ export function registerReconciliationRoutes(app: Express, deps: ReconciliationR
     });
   });
 }
+

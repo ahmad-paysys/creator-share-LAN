@@ -127,3 +127,4 @@ export class SettingsStore {
     return parseStoredBoolean(row?.value_json, fallback);
   }
 }
+

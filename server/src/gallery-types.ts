@@ -50,3 +50,4 @@ export function canManageGallery(user: SafeUser, gallery: GalleryRecord): boolea
 
   return user.role === "editor" && gallery.createdBy === user.id;
 }
+
