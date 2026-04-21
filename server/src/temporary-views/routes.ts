@@ -1,11 +1,11 @@
 import type { Express, Request, Response } from "express";
-import { AuthStore } from "./auth/store";
-import { GalleryStore } from "./gallery-store";
-import { isLanIp } from "./access/lan";
-import { TemporaryViewStore } from "./temporary-view-store";
-import { canManageTemporaryView } from "./temporary-view-types";
-import type { TemporaryViewVisibility } from "./temporary-view-types";
-import type { MediaItem } from "./types/app";
+import { AuthStore } from "../auth/store";
+import { GalleryStore } from "../gallery/store";
+import { isLanIp } from "../access/lan";
+import { TemporaryViewStore } from "./store";
+import { canManageTemporaryView } from "./types";
+import type { TemporaryViewVisibility } from "./types";
+import type { MediaItem } from "../types/app";
 
 interface TemporaryViewRouteDeps {
   temporaryViewStore: TemporaryViewStore;

@@ -1,11 +1,11 @@
 import type { Express, Request, Response } from "express";
-import type { SafeUser, UserRole } from "./auth/types";
-import { AuthStore } from "./auth/store";
-import { GalleryStore } from "./gallery-store";
-import type { GalleryRecord, GalleryVisibility } from "./gallery-types";
-import { canManageGallery } from "./gallery-types";
-import { isLanIp } from "./access/lan";
-import type { MediaItem } from "./types/app";
+import type { SafeUser, UserRole } from "../auth/types";
+import { AuthStore } from "../auth/store";
+import { GalleryStore } from "./store";
+import type { GalleryRecord, GalleryVisibility } from "./types";
+import { canManageGallery } from "./types";
+import { isLanIp } from "../access/lan";
+import type { MediaItem } from "../types/app";
 
 interface GalleryRouteDeps {
   galleryStore: GalleryStore;

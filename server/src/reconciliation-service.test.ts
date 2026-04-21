@@ -4,10 +4,10 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { AuthStore } from "./auth/store";
 import { AppDatabase } from "./core/database";
-import { GalleryStore } from "./gallery-store";
+import { GalleryStore } from "./gallery/store";
 import { ReconciliationService } from "./reconciliation-service";
 import { ReconciliationStore } from "./reconciliation-store";
-import { TemporaryViewStore } from "./temporary-view-store";
+import { TemporaryViewStore } from "./temporary-views/store";
 import type { MediaItem } from "./types/app";
 
 const dirs: string[] = [];

@@ -10,11 +10,11 @@ import { authContextMiddleware } from "./auth/middleware";
 import { registerAuthRoutes } from "./auth/routes";
 import { AuthStore } from "./auth/store";
 import { AppDatabase } from "./core/database";
-import { GalleryStore } from "./gallery-store";
+import { GalleryStore } from "./gallery/store";
 import { registerReconciliationRoutes } from "./reconciliation-routes";
 import { ReconciliationService } from "./reconciliation-service";
 import { ReconciliationStore } from "./reconciliation-store";
-import { TemporaryViewStore } from "./temporary-view-store";
+import { TemporaryViewStore } from "./temporary-views/store";
 import type { MediaItem } from "./types/app";
 
 const COOKIE_NAME = "creator_session";

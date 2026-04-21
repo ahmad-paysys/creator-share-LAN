@@ -16,7 +16,7 @@ import { registerOpsRoutes } from "./ops-routes";
 import { ReconciliationStore } from "./reconciliation-store";
 import { SettingsStore } from "./settings-store";
 import { registerSettingsRoutes } from "./settings-routes";
-import { TemporaryViewStore } from "./temporary-view-store";
+import { TemporaryViewStore } from "./temporary-views/store";
 
 const COOKIE_NAME = "creator_session";
 
