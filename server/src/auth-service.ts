@@ -191,3 +191,4 @@ export class AuthService {
     this.store.deleteSessionByTokenHash(hashToken(token));
   }
 }
+

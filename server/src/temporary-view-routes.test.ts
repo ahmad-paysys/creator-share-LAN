@@ -9,12 +9,12 @@ import { AuthService } from "./auth-service";
 import { authContextMiddleware } from "./auth-middleware";
 import { registerAuthRoutes } from "./auth-routes";
 import { AuthStore } from "./auth-store";
-import { AppDatabase } from "./database";
+import { AppDatabase } from "./core/database";
 import { GalleryStore } from "./gallery-store";
 import { registerGalleryRoutes } from "./gallery-routes";
 import { registerTemporaryViewRoutes } from "./temporary-view-routes";
 import { TemporaryViewStore } from "./temporary-view-store";
-import type { MediaItem } from "./types";
+import type { MediaItem } from "./types/app";
 
 const COOKIE_NAME = "creator_session";
 
@@ -142,3 +142,4 @@ describe("temporary view routes", () => {
     expect(revokedRead.status).toBe(410);
   });
 });
+

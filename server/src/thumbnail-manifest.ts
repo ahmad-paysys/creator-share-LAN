@@ -104,3 +104,4 @@ export class ThumbnailManifest {
     await fsp.rename(tempPath, this.manifestPath);
   }
 }
+

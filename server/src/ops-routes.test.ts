@@ -11,7 +11,7 @@ import { AuthService } from "./auth-service";
 import { authContextMiddleware } from "./auth-middleware";
 import { registerAuthRoutes } from "./auth-routes";
 import { AuthStore } from "./auth-store";
-import { AppDatabase } from "./database";
+import { AppDatabase } from "./core/database";
 import { registerOpsRoutes } from "./ops-routes";
 import { ReconciliationStore } from "./reconciliation-store";
 import { SettingsStore } from "./settings-store";
@@ -218,3 +218,4 @@ describe("ops routes", () => {
     expect(actions).not.toContain("ops.old");
   });
 });
+

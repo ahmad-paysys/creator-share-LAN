@@ -10,7 +10,7 @@ import { authContextMiddleware } from "./auth-middleware";
 import { registerAuthRoutes } from "./auth-routes";
 import { AuthStore } from "./auth-store";
 import { csrfProtectionMiddleware } from "./csrf-middleware";
-import { AppDatabase } from "./database";
+import { AppDatabase } from "./core/database";
 import { registerSettingsRoutes } from "./settings-routes";
 import { SettingsStore } from "./settings-store";
 
@@ -114,3 +114,4 @@ describe("csrf protection", () => {
     expect(response.body.folderViewPublic).toBe(false);
   });
 });
+

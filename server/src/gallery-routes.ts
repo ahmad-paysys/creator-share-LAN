@@ -5,7 +5,7 @@ import { GalleryStore } from "./gallery-store";
 import type { GalleryRecord, GalleryVisibility } from "./gallery-types";
 import { canManageGallery } from "./gallery-types";
 import { isLanIp } from "./lan-access";
-import type { MediaItem } from "./types";
+import type { MediaItem } from "./types/app";
 
 interface GalleryRouteDeps {
   galleryStore: GalleryStore;
@@ -378,3 +378,4 @@ export function registerGalleryRoutes(app: Express, deps: GalleryRouteDeps): voi
     });
   });
 }
+

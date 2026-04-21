@@ -5,7 +5,7 @@ import { isLanIp } from "./lan-access";
 import { TemporaryViewStore } from "./temporary-view-store";
 import { canManageTemporaryView } from "./temporary-view-types";
 import type { TemporaryViewVisibility } from "./temporary-view-types";
-import type { MediaItem } from "./types";
+import type { MediaItem } from "./types/app";
 
 interface TemporaryViewRouteDeps {
   temporaryViewStore: TemporaryViewStore;
@@ -355,3 +355,4 @@ export function registerTemporaryViewRoutes(app: Express, deps: TemporaryViewRou
     res.json({ ok: true });
   });
 }
+

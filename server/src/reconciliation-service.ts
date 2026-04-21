@@ -1,4 +1,4 @@
-import type { MediaItem } from "./types";
+import type { MediaItem } from "./types/app";
 import { ReconciliationStore } from "./reconciliation-store";
 import type { ReconciliationRemapRecord, ReconciliationRunSummary } from "./reconciliation-types";
 
@@ -162,3 +162,4 @@ export class ReconciliationService {
     };
   }
 }
+

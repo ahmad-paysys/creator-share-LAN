@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import dotenv from "dotenv";
-import type { AppConfig } from "./types";
+import type { AppConfig } from "../types/app";
 
 const DEFAULTS = {
   PORT: 3000,

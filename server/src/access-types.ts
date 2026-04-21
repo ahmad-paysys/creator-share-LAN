@@ -24,3 +24,4 @@ export interface AccessDecision {
   allowed: boolean;
   reason: AccessDecisionReason;
 }
+

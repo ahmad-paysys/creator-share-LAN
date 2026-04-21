@@ -59,3 +59,4 @@ describe("requireReadAccess middleware", () => {
     expect(response.headers["x-authz-reason"]).toBe("ALLOW_VIEWER");
   });
 });
+
