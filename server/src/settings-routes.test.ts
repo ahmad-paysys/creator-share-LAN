@@ -5,10 +5,10 @@ import cookieParser from "cookie-parser";
 import express from "express";
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { AuthService } from "./auth-service";
-import { authContextMiddleware } from "./auth-middleware";
-import { registerAuthRoutes } from "./auth-routes";
-import { AuthStore } from "./auth-store";
+import { AuthService } from "./auth/service";
+import { authContextMiddleware } from "./auth/middleware";
+import { registerAuthRoutes } from "./auth/routes";
+import { AuthStore } from "./auth/store";
 import { AppDatabase } from "./core/database";
 import { registerSettingsRoutes } from "./settings-routes";
 import { SettingsStore } from "./settings-store";
@@ -57,9 +57,9 @@ describe("settings routes", () => {
     expect(response.body.uiThemeDefault).toBe("solar");
   });
 
-  it("requires privileged role", async () => {
+  it("requires authentication for admin settings", async () => {
     const response = await request(app).get("/api/admin/settings");
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(401);
   });
 
   it("allows owner to read and update settings", async () => {
@@ -102,4 +102,5 @@ describe("settings routes", () => {
     expect(invalid.status).toBe(400);
   });
 });
+
 

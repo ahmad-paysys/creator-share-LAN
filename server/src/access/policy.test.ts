@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { evaluateAccess } from "./access-policy";
-import type { SafeUser } from "./auth-types";
-import type { VisibilitySettings } from "./access-types";
+import { evaluateAccess } from "./policy";
+import type { SafeUser } from "../auth/types";
+import type { VisibilitySettings } from "./types";
 
 const publicSettings: VisibilitySettings = {
   folderViewPublic: true,
@@ -88,4 +88,5 @@ describe("evaluateAccess", () => {
     });
   });
 });
+
 

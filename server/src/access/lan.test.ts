@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isLanIp } from "./lan-access";
+import { isLanIp } from "./lan";
 
 describe("isLanIp", () => {
   it("accepts local/private IPv4 addresses", () => {
@@ -26,4 +26,5 @@ describe("isLanIp", () => {
     expect(isLanIp("2001:4860:4860::8888")).toBe(false);
   });
 });
+
 

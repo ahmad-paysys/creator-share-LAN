@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
-import type { SafeUser, UserRole } from "./auth-types";
+import type { SafeUser, UserRole } from "./auth/types";
 import type {
   GalleryAccessSnapshot,
   GalleryItemRecord,
@@ -336,4 +336,5 @@ export class GalleryStore {
     return Boolean(row);
   }
 }
+
 

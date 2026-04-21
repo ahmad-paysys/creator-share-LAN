@@ -5,10 +5,10 @@ import cookieParser from "cookie-parser";
 import express from "express";
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { AuthService } from "./auth-service";
-import { authContextMiddleware } from "./auth-middleware";
-import { registerAuthRoutes } from "./auth-routes";
-import { AuthStore } from "./auth-store";
+import { AuthService } from "./auth/service";
+import { authContextMiddleware } from "./auth/middleware";
+import { registerAuthRoutes } from "./auth/routes";
+import { AuthStore } from "./auth/store";
 import { AppDatabase } from "./core/database";
 import { GalleryStore } from "./gallery-store";
 import { registerGalleryRoutes } from "./gallery-routes";
@@ -142,4 +142,5 @@ describe("temporary view routes", () => {
     expect(revokedRead.status).toBe(410);
   });
 });
+
 

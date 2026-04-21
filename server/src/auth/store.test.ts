@@ -2,8 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { AuthStore } from "./auth-store";
-import { AppDatabase } from "./core/database";
+import { AuthStore } from "./store";
+import { AppDatabase } from "../core/database";
 
 const createdDirs: string[] = [];
 
@@ -77,4 +77,5 @@ describe("AuthStore", () => {
     appDb.close();
   });
 });
+
 

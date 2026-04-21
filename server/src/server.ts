@@ -5,18 +5,18 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import mime from "mime-types";
-import { requireReadAccess } from "./access-middleware";
+import { requireReadAccess } from "./access/middleware";
 import { AuditStore } from "./audit-store";
-import { AuthService } from "./auth-service";
-import { authContextMiddleware } from "./auth-middleware";
-import { registerAuthRoutes } from "./auth-routes";
-import { AuthStore } from "./auth-store";
+import { AuthService } from "./auth/service";
+import { authContextMiddleware } from "./auth/middleware";
+import { registerAuthRoutes } from "./auth/routes";
+import { AuthStore } from "./auth/store";
 import { loadConfig } from "./core/config";
 import { AppDatabase } from "./core/database";
 import { GalleryStore } from "./gallery-store";
 import { registerGalleryRoutes } from "./gallery-routes";
 import { csrfProtectionMiddleware } from "./csrf-middleware";
-import { LoginThrottle } from "./login-throttle";
+import { LoginThrottle } from "./auth/throttle";
 import { MediaIndex } from "./media-index";
 import { registerOpsRoutes } from "./ops-routes";
 import { registerReconciliationRoutes } from "./reconciliation-routes";
@@ -402,4 +402,5 @@ bootstrap().catch((error) => {
 });
 
 export { app };
+
 

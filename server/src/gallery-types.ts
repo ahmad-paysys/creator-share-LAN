@@ -1,4 +1,4 @@
-import type { SafeUser, UserRole } from "./auth-types";
+import type { SafeUser, UserRole } from "./auth/types";
 
 export type GalleryVisibility = "public" | "private";
 
@@ -50,4 +50,5 @@ export function canManageGallery(user: SafeUser, gallery: GalleryRecord): boolea
 
   return user.role === "editor" && gallery.createdBy === user.id;
 }
+
 

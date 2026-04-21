@@ -1,4 +1,4 @@
-import type { SafeUser } from "./auth-types";
+import type { SafeUser } from "./auth/types";
 
 export type TemporaryViewVisibility = "public" | "private";
 export type TemporaryViewSourceType = "selection" | "gallery";
@@ -34,4 +34,5 @@ export function canManageTemporaryView(user: SafeUser, view: TemporaryViewRecord
 
   return user.role === "editor" && view.createdBy === user.id;
 }
+
 

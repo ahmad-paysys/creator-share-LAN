@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import type { UiThemeProfile, VisibilitySettings } from "./access-types";
+import type { UiThemeProfile, VisibilitySettings } from "./access/types";
 
 const KEY_FOLDER_VIEW_PUBLIC = "folder_view_public";
 const KEY_LIBRARY_VIEW_PUBLIC = "library_view_public";
@@ -127,4 +127,5 @@ export class SettingsStore {
     return parseStoredBoolean(row?.value_json, fallback);
   }
 }
+
 

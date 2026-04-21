@@ -1,17 +1,8 @@
-import type { Express, Request, Response } from "express";
-import type { UiThemeProfile } from "./access-types";
+import type { Express } from "express";
+import type { UiThemeProfile } from "./access/types";
 import { AuditStore } from "./audit-store";
+import { requirePrivilegedUser } from "./shared/auth-guards";
 import { SettingsStore } from "./settings-store";
-
-function requirePrivilegedUser(req: Request, res: Response): boolean {
-  const role = req.auth?.user?.role;
-  if (role === "owner" || role === "admin") {
-    return true;
-  }
-
-  res.status(403).json({ error: "Forbidden" });
-  return false;
-}
 
 export function registerSettingsRoutes(
   app: Express,
@@ -98,4 +89,5 @@ export function registerSettingsRoutes(
     });
   });
 }
+
 

@@ -1,8 +1,9 @@
-import type { Express, Request, Response } from "express";
-import { AuditStore } from "./audit-store";
-import { AuthService } from "./auth-service";
-import { createCsrfToken } from "./csrf-middleware";
-import { LoginThrottle } from "./login-throttle";
+import type { Express } from "express";
+import { AuditStore } from "../audit-store";
+import { AuthService } from "./service";
+import { createCsrfToken } from "../csrf-middleware";
+import { requirePrivilegedUser } from "../shared/auth-guards";
+import { LoginThrottle } from "./throttle";
 
 function sanitizeDisplayName(value: unknown): string | null {
   if (typeof value !== "string") {
@@ -11,16 +12,6 @@ function sanitizeDisplayName(value: unknown): string | null {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
-}
-
-function requirePrivilegedUser(req: Request, res: Response): boolean {
-  const role = req.auth?.user?.role;
-  if (role === "owner" || role === "admin") {
-    return true;
-  }
-
-  res.status(403).json({ error: "Forbidden" });
-  return false;
 }
 
 export function registerAuthRoutes(app: Express, deps: {
@@ -236,4 +227,5 @@ export function registerAuthRoutes(app: Express, deps: {
     }
   });
 }
+
 
