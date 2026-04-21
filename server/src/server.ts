@@ -5,31 +5,27 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import mime from "mime-types";
-import { requireReadAccess } from "./access/middleware";
-import { AuditStore } from "./ops/audit-store";
-import { AuthService } from "./auth/service";
-import { authContextMiddleware } from "./auth/middleware";
-import { registerAuthRoutes } from "./auth/routes";
-import { AuthStore } from "./auth/store";
-import { loadConfig } from "./core/config";
-import { AppDatabase } from "./core/database";
-import { GalleryStore } from "./gallery/store";
-import { registerGalleryRoutes } from "./gallery/routes";
-import { csrfProtectionMiddleware } from "./csrf-middleware";
-import { LoginThrottle } from "./auth/throttle";
-import { MediaIndex } from "./media/indexer";
-import { registerOpsRoutes } from "./ops/routes";
-import { registerReconciliationRoutes } from "./reconciliation/routes";
-import { ReconciliationService } from "./reconciliation/service";
-import { ReconciliationStore } from "./reconciliation/store";
-import { createTokenBucketRateLimiter } from "./ops/rate-limit";
-import { ResizeService } from "./media/resize";
-import { registerSettingsRoutes } from "./settings/routes";
-import { SettingsStore } from "./settings/store";
-import { registerTemporaryViewRoutes } from "./temporary-views/routes";
-import { TemporaryViewStore } from "./temporary-views/store";
-import { ThumbnailService } from "./media/thumbnail-service";
-import type { MediaItem } from "./types/app";
+import { requireReadAccess } from "./access";
+import {
+  AuthService,
+  authContextMiddleware,
+  registerAuthRoutes,
+  AuthStore,
+  LoginThrottle,
+} from "./auth";
+import { loadConfig, AppDatabase } from "./core";
+import { csrfProtectionMiddleware } from "./csrf";
+import { GalleryStore, registerGalleryRoutes } from "./gallery";
+import { MediaIndex, ResizeService, ThumbnailService } from "./media";
+import { AuditStore, createTokenBucketRateLimiter, registerOpsRoutes } from "./ops";
+import {
+  registerReconciliationRoutes,
+  ReconciliationService,
+  ReconciliationStore,
+} from "./reconciliation";
+import { registerSettingsRoutes, SettingsStore } from "./settings";
+import { registerTemporaryViewRoutes, TemporaryViewStore } from "./temporary-views";
+import type { MediaItem } from "./types";
 
 const config = loadConfig();
 const app = express();

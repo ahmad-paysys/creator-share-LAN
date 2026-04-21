@@ -1,2 +1,1 @@
-// Phase 1 scaffold placeholder for csrf module exports.
-export {};
+export { createCsrfToken, csrfProtectionMiddleware } from "../csrf-middleware";
